@@ -11,6 +11,7 @@ using LawConnect.Infrastructure.Persistence.Interceptors;
 using LawConnect.Infrastructure.Sms;
 using LawConnect.Infrastructure.Storage;
 using LawConnect.Shared.Constants;
+using LawConnect.Shared.Infrastructure;
 using LawConnect.Shared.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,13 @@ public static class DependencyInjection
     {
         services.AddOptions<ConnectionStringsOptions>()
             .Bind(configuration.GetSection(ConnectionStringsOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                if (string.IsNullOrWhiteSpace(options.HangfireConnection))
+                {
+                    options.HangfireConnection = options.DefaultConnection;
+                }
+            })
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -104,7 +112,7 @@ public static class DependencyInjection
 
         if (!environment.IsEnvironment("Testing"))
         {
-            AddHangfire(services, configuration);
+            AddHangfire(services, configuration, environment);
             services.AddSingleton<IEmergencyTimeoutScheduler, Emergency.HangfireEmergencyTimeoutScheduler>();
             services.AddHttpClient<IReverseGeocoder, NominatimReverseGeocoder>(client =>
             {
@@ -135,9 +143,11 @@ public static class DependencyInjection
             return;
         }
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException(
-                $"Connection string '{nameof(ConnectionStringsOptions.DefaultConnection)}' is not configured.");
+        var connectionString = ResolvePostgresConnection(
+            environment,
+            "ConnectionStrings__DefaultConnection",
+            configuration.GetConnectionString("DefaultConnection"),
+            configuration["DATABASE_URL"]);
 
         services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
         {
@@ -168,9 +178,16 @@ public static class DependencyInjection
             return;
         }
 
-        var redisConnection = configuration.GetConnectionString("Redis")
+        var redisConnection = ConnectionStringResolver.Coalesce(
+            configuration.GetConnectionString("Redis"),
+            configuration["REDIS_URL"])
             ?? throw new InvalidOperationException(
                 $"Connection string '{nameof(ConnectionStringsOptions.Redis)}' is not configured.");
+        ConnectionStringResolver.EnsureNotLoopbackInProduction(
+            "ConnectionStrings__Redis",
+            redisConnection,
+            environment.IsProduction());
+        redisConnection = RedisConnectionString.Normalize(redisConnection);
 
         services.AddStackExchangeRedisCache(options =>
         {
@@ -179,12 +196,17 @@ public static class DependencyInjection
         });
     }
 
-    private static void AddHangfire(IServiceCollection services, IConfiguration configuration)
+    private static void AddHangfire(
+        IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
-        var hangfireConnection = configuration.GetConnectionString("HangfireConnection")
-            ?? configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException(
-                $"Connection string '{nameof(ConnectionStringsOptions.HangfireConnection)}' is not configured.");
+        var hangfireConnection = ResolvePostgresConnection(
+            environment,
+            "ConnectionStrings__DefaultConnection",
+            configuration.GetConnectionString("HangfireConnection"),
+            configuration.GetConnectionString("DefaultConnection"),
+            configuration["DATABASE_URL"]);
 
         services.AddHangfire(config =>
         {
@@ -292,5 +314,20 @@ public static class DependencyInjection
         {
             services.AddSingleton<IFileStorage, LocalFileStorage>();
         }
+    }
+
+    private static string ResolvePostgresConnection(
+        IHostEnvironment environment,
+        string environmentVariableName,
+        params string?[] candidates)
+    {
+        var raw = ConnectionStringResolver.Coalesce(candidates)
+            ?? throw new InvalidOperationException(
+                $"{environmentVariableName} is not configured.");
+        ConnectionStringResolver.EnsureNotLoopbackInProduction(
+            environmentVariableName,
+            raw,
+            environment.IsProduction());
+        return PostgresConnectionString.Normalize(raw);
     }
 }

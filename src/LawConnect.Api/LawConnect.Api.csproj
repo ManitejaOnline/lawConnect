@@ -26,6 +26,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Update="appsettings.Production.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LawConnect.Application\LawConnect.Application.csproj" />
     <ProjectReference Include="..\LawConnect.Infrastructure\LawConnect.Infrastructure.csproj" />
     <ProjectReference Include="..\LawConnect.Shared\LawConnect.Shared.csproj" />

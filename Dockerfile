@@ -36,7 +36,8 @@ USER $APP_UID
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENV ASPNETCORE_HTTP_PORTS=
 
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "export ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080} && exec dotnet LawConnect.Api.dll"]
+ENTRYPOINT ["sh", "-c", "export ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080}; unset ASPNETCORE_HTTP_PORTS; exec dotnet LawConnect.Api.dll"]

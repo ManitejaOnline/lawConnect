@@ -4,7 +4,9 @@ using Hangfire;
 using LawConnect.Api.Realtime;
 using LawConnect.Application.Common.Realtime;
 using LawConnect.Shared.Constants;
+using LawConnect.Shared.Infrastructure;
 using LawConnect.Shared.Options;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
@@ -97,14 +99,28 @@ public static class ServiceCollectionExtensions
             return;
         }
 
-        var defaultConnection = configuration.GetConnectionString("DefaultConnection")
+        var defaultConnection = ConnectionStringResolver.Coalesce(
+            configuration.GetConnectionString("DefaultConnection"),
+            configuration["DATABASE_URL"])
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
-        var redisConnection = configuration.GetConnectionString("Redis")
+        ConnectionStringResolver.EnsureNotLoopbackInProduction(
+            "ConnectionStrings__DefaultConnection",
+            defaultConnection,
+            environment.IsProduction());
+        defaultConnection = PostgresConnectionString.Normalize(defaultConnection);
+
+        var redisConnection = ConnectionStringResolver.Coalesce(
+            configuration.GetConnectionString("Redis"),
+            configuration["REDIS_URL"])
             ?? throw new InvalidOperationException("Connection string 'Redis' is not configured.");
+        ConnectionStringResolver.EnsureNotLoopbackInProduction(
+            "ConnectionStrings__Redis",
+            redisConnection,
+            environment.IsProduction());
 
         healthChecks
             .AddNpgSql(defaultConnection, name: "postgresql")
-            .AddRedis(redisConnection, name: "redis")
+            .AddRedis(RedisConnectionString.Normalize(redisConnection), name: "redis")
             .AddHangfire(options =>
             {
                 options.MinimumAvailableServers = 0;
@@ -210,7 +226,19 @@ public static class WebApplicationExtensions
             };
         });
 
-        app.UseHttpsRedirection();
+        var forwardedHeaders = new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        };
+        forwardedHeaders.KnownIPNetworks.Clear();
+        forwardedHeaders.KnownProxies.Clear();
+        app.UseForwardedHeaders(forwardedHeaders);
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
+
         app.UseCors(CorsPolicyNames.Default);
         app.UseRateLimiter();
         app.UseAuthentication();

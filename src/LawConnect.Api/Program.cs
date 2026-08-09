@@ -2,6 +2,8 @@ using LawConnect.Application;
 using LawConnect.Api.Configuration;
 using LawConnect.Api.Extensions;
 using LawConnect.Infrastructure;
+using LawConnect.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -15,6 +17,7 @@ try
     var builder = WebApplication.CreateBuilder(args);
     builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
     builder.Configuration.AddEmergencyEnvironmentOverrides();
+    builder.Configuration.AddProductionConnectionFallbacks();
 
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
@@ -29,6 +32,16 @@ try
     builder.Services.AddApiServices(builder.Configuration, builder.Environment);
 
     var app = builder.Build();
+
+    var applyMigrations = app.Configuration.GetValue<bool?>("Database:ApplyMigrations")
+        ?? app.Environment.IsProduction();
+    if (applyMigrations && !app.Environment.IsEnvironment("Testing"))
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await db.Database.MigrateAsync();
+    }
+
     app.UseApiPipeline();
     app.Run();
 }
