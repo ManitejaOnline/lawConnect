@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lawconnect-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lawconnect}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_StrongPassword!}
+      POSTGRES_DB: ${POSTGRES_DB:-lawconnect}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lawconnect} -d ${POSTGRES_DB:-lawconnect}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - lawconnect-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: lawconnect-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - lawconnect-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lawconnect-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lawconnect};Username=${POSTGRES_USER:-lawconnect};Password=${POSTGRES_PASSWORD:-ChangeMe_StrongPassword!}
+      ConnectionStrings__HangfireConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lawconnect};Username=${POSTGRES_USER:-lawconnect};Password=${POSTGRES_PASSWORD:-ChangeMe_StrongPassword!}
+      ConnectionStrings__Redis: redis:6379
+      Jwt__Secret: ${JWT_SECRET:-ReplaceWithAtLeast32CharacterSecretKey!}
+      Jwt__Issuer: ${JWT_ISSUER:-LawConnect}
+      Jwt__Audience: ${JWT_AUDIENCE:-LawConnect}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    networks:
+      - lawconnect-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  lawconnect-network:
+    driver: bridge

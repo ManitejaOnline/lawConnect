@@ -1,0 +1,75 @@
+## .NET
+bin/
+obj/
+out/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.DotSettings.user
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Secrets / env
+.appsettings.*.local.json
+**/appsettings.Local.json
+.env
+.env.*
+!.env.example
+secrets.json
+**/agora.secrets.*
+
+## IDE
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+## Test / coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+## Hangfire / local data
+hangfire.db
+
+## Docker
+docker-data/
+
+## Node / Expo
+node_modules/
+.expo/
+dist/
+dist-*/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+*.tsbuildinfo
+
+## Nested git backups (do not commit)
+**/.git.bak*/
+
+## Local editor / agent settings
+.claude/settings.local.json

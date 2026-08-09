@@ -1,0 +1,28 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Entity/DTO auto-properties and constants are not "public methods".
+# Public methods elsewhere still require XML documentation (CS1591 as error via TreatWarningsAsErrors).
+[**/LawConnect.Domain/Entities/**.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+[**/LawConnect.Domain/Enums/**.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+[**/LawConnect.Shared/Constants/**.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+[**/LawConnect.Shared/Options/**.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+[**/Migrations/**.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+[**/Persistence/Configurations/**.cs]
+dotnet_diagnostic.CS1591.severity = none
