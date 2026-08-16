@@ -6,6 +6,7 @@ import { useToastStore } from '@/store/toastStore';
 import type { AuthTokenResponse, RefreshTokenPayload } from '@/types/api';
 import { AppError } from '@/utils/errors';
 import { getApiBaseUrl } from '@/config/apiBaseUrl';
+import { isDeviceOffline } from '@/utils/deviceNetwork';
 import { ensureDeviceIdentifier, getDevicePlatform } from '@/utils/device';
 
 type RetriableConfig = InternalAxiosRequestConfig & {
@@ -21,10 +22,16 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function mapAxiosError(error: AxiosError): AppError {
+function mapAxiosError(error: AxiosError, offline = false): AppError {
   if (!error.response) {
-    return new AppError('Network unavailable. Check your connection.', {
-      isNetworkError: true,
+    if (offline) {
+      return new AppError('Network unavailable. Check your connection.', {
+        isNetworkError: true,
+        cause: error,
+      });
+    }
+    return new AppError('Unable to connect to server.', {
+      isServerUnreachable: true,
       cause: error,
     });
   }
@@ -133,11 +140,18 @@ function createApiClient(): AxiosInstance {
         return client(original);
       }
 
-      const appError = mapAxiosError(error);
+      const offline = !error.response ? await isDeviceOffline() : false;
+      const appError = mapAxiosError(error, offline);
       if (appError.isNetworkError) {
         useToastStore.getState().show({
           title: 'You are offline',
           message: 'Changes will sync when connection returns.',
+          variant: 'warning',
+        });
+      } else if (appError.isServerUnreachable) {
+        useToastStore.getState().show({
+          title: 'Unable to connect to server',
+          message: 'The LawConnect service is unreachable. Try again shortly.',
           variant: 'warning',
         });
       }

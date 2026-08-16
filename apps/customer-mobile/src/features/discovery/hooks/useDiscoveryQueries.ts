@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useDeviceLocation } from '@/hooks/useDeviceLocation';
 import { appointmentKeys } from '@/features/appointments/hooks/useAppointmentQueries';
 import { appointmentsApi, lawyersApi } from '@/services/api/lawyersApi';
+import { ratingsApi } from '@/services/api/ratingsApi';
 import { useDiscoveryFiltersStore } from '@/store/discoveryFiltersStore';
 import type { DiscoveryFilters, LawyerSearchParams } from '@/types/home';
 
@@ -13,6 +14,7 @@ export const discoveryKeys = {
   profile: (lawyerId: string) => [...discoveryKeys.all, 'profile', lawyerId] as const,
   slots: (lawyerId: string, date: string) =>
     [...discoveryKeys.all, 'slots', lawyerId, date] as const,
+  trustScore: (lawyerId: string) => [...discoveryKeys.all, 'trust-score', lawyerId] as const,
 };
 
 function filtersToParams(
@@ -73,6 +75,15 @@ export function useLawyerProfileQuery(lawyerId: string) {
     enabled: Boolean(lawyerId),
     staleTime: 15_000,
     refetchInterval: 15_000,
+  });
+}
+
+export function useLawyerTrustScoreQuery(lawyerId: string) {
+  return useQuery({
+    queryKey: discoveryKeys.trustScore(lawyerId),
+    queryFn: () => ratingsApi.getTrustScore(lawyerId),
+    enabled: Boolean(lawyerId),
+    staleTime: 15_000,
   });
 }
 

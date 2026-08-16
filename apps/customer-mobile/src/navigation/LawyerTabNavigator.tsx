@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AppointmentsListScreen } from '@/features/appointments/screens/AppointmentsListScreen';
 import { AppointmentDetailScreen } from '@/features/appointments/screens/AppointmentDetailScreen';
+import { CaseDetailScreen } from '@/features/cases/screens/CaseDetailScreen';
+import { CasesListScreen } from '@/features/cases/screens/CasesListScreen';
+import { CreateCaseScreen } from '@/features/cases/screens/CreateCaseScreen';
 import { LawyerAccountScreen } from '@/features/lawyer/screens/LawyerAccountScreen';
 import { LawyerAvailabilityEditScreen } from '@/features/lawyer/screens/LawyerAvailabilityEditScreen';
 import { LawyerEmergencyActiveScreen } from '@/features/lawyer/screens/LawyerEmergencyActiveScreen';
@@ -56,6 +59,7 @@ function LawyerAppointmentsStackNavigator() {
           <AppointmentsListScreen
             perspective="lawyer"
             onOpen={(appointmentId) => navigation.navigate('LawyerAppointmentDetail', { appointmentId })}
+            onOpenCases={() => navigation.navigate('LawyerCasesList')}
           />
         )}
       </AppointmentsStack.Screen>
@@ -71,6 +75,32 @@ function LawyerAppointmentsStackNavigator() {
                 params: args,
               })
             }
+            onCreateCase={(args) => navigation.navigate('LawyerCreateCase', args)}
+          />
+        )}
+      </AppointmentsStack.Screen>
+      <AppointmentsStack.Screen name="LawyerCasesList">
+        {({ navigation }) => (
+          <CasesListScreen
+            perspective="lawyer"
+            onOpen={(caseId) => navigation.navigate('LawyerCaseDetail', { caseId })}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </AppointmentsStack.Screen>
+      <AppointmentsStack.Screen name="LawyerCaseDetail">
+        {({ navigation, route }) => (
+          <CaseDetailScreen caseId={route.params.caseId} perspective="lawyer" onBack={() => navigation.goBack()} />
+        )}
+      </AppointmentsStack.Screen>
+      <AppointmentsStack.Screen name="LawyerCreateCase">
+        {({ navigation, route }) => (
+          <CreateCaseScreen
+            customerId={route.params.customerId}
+            customerName={route.params.customerName}
+            sourceAppointmentId={route.params.sourceAppointmentId}
+            onBack={() => navigation.goBack()}
+            onCreated={(caseId) => navigation.replace('LawyerCaseDetail', { caseId })}
           />
         )}
       </AppointmentsStack.Screen>

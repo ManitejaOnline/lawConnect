@@ -17,6 +17,7 @@ public sealed class Appointment : BaseEntity
     public string? CancellationReason { get; set; }
     public DateTime? CancelledAtUtc { get; set; }
     public Guid? CancelledByUserId { get; set; }
+    public DateTime? NoShowReportedAtUtc { get; set; }
     public decimal ConsultationFeeSnapshot { get; set; }
     public string TimeZoneId { get; set; } = "Asia/Kolkata";
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;

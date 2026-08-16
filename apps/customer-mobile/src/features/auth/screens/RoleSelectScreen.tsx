@@ -32,7 +32,7 @@ export function RoleSelectScreen({ navigation }: Props) {
           <Button title="Sign in" variant="ghost" onPress={() => navigation.navigate('Login')} />
         </View>
         <Text variant="caption" color="secondary" align="center">
-          Customer and lawyer apps are separate. Admin access is only on the web portal.
+          Customer and lawyer apps are separate.
         </Text>
       </View>
     </Screen>

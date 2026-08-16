@@ -40,6 +40,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withSafeHermesCommand",
+      "./plugins/withSdk54MainApplication",
       "expo-secure-store",
       "expo-font",
       [

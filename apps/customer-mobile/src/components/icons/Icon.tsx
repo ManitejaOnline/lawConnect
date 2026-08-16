@@ -52,7 +52,9 @@ export type IconName =
   | 'globe'
   | 'scale'
   | 'leaf'
-  | 'building';
+  | 'building'
+  | 'gavel'
+  | 'flag';
 
 export type IconProps = {
   name: IconName;
@@ -104,6 +106,7 @@ const FEATHER: Partial<Record<IconName, keyof typeof Feather.glyphMap>> = {
   users: 'users',
   globe: 'globe',
   building: 'home',
+  flag: 'flag',
 };
 
 const MCI: Partial<Record<IconName, keyof typeof MaterialCommunityIcons.glyphMap>> = {
@@ -114,6 +117,7 @@ const MCI: Partial<Record<IconName, keyof typeof MaterialCommunityIcons.glyphMap
   'heart-fill': 'heart',
   scale: 'scale-balance',
   leaf: 'leaf',
+  gavel: 'gavel',
 };
 
 export function Icon({ name, size = 20, color }: IconProps) {

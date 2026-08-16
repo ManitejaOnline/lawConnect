@@ -282,6 +282,8 @@ public static class WebApplicationExtensions
                 Authorization = [new Hangfire.Dashboard.LocalRequestsOnlyAuthorizationFilter()]
             });
             LawConnect.Infrastructure.Payments.OutboxHangfireRegistration.RegisterRecurringJobs();
+            LawConnect.Infrastructure.BackgroundJobs.TrustScoreHangfireRegistration.RegisterRecurringJobs();
+            LawConnect.Infrastructure.BackgroundJobs.OverdueMilestoneHangfireRegistration.RegisterRecurringJobs();
         }
 
         if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))

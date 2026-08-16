@@ -18,7 +18,10 @@ public sealed record AdminLawyerApplicationSummary(
     string? StateName,
     string? CountryName,
     int YearsOfExperience,
-    IReadOnlyList<string> PracticeAreas);
+    IReadOnlyList<string> PracticeAreas,
+    DateTime? VerifiedAtUtc,
+    DateTime? ReviewedAtUtc,
+    string? ReviewReason);
 
 /// <summary>
 /// Full lawyer application for admin review.

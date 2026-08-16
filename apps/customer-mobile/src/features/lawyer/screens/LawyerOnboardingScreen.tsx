@@ -223,6 +223,7 @@ export function LawyerOnboardingScreen() {
         uri: file.uri,
         name: file.name || `${documentType}.pdf`,
         mimeType: file.mimeType || 'application/pdf',
+        file: file.file,
       });
     },
     onSuccess: async (result) => {
@@ -253,7 +254,7 @@ export function LawyerOnboardingScreen() {
       const file = picked.assets[0];
       const name = file.fileName || 'profile.jpg';
       const mimeType = file.mimeType || 'image/jpeg';
-      const profile = await usersApi.uploadProfilePicture({ uri: file.uri, name, mimeType });
+      const profile = await usersApi.uploadProfilePicture({ uri: file.uri, name, mimeType, file: file.file });
       return profile.profileImageUrl ?? file.uri;
     },
     onSuccess: (uri) => {

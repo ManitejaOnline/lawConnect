@@ -6,6 +6,7 @@ using LawConnect.Application.Common.Realtime;
 using LawConnect.Application.Common.Services;
 using LawConnect.Application.Features.Appointments.Services;
 using LawConnect.Application.Features.Auth.Services;
+using LawConnect.Application.Features.Cases.Services;
 using LawConnect.Application.Features.Chat.Services;
 using LawConnect.Application.Features.Emergency.Services;
 using LawConnect.Application.Features.Lawyers.Services;
@@ -58,6 +59,8 @@ public static class DependencyInjection
         services.AddSingleton<IPresenceTracker, PresenceTracker>();
         services.AddSingleton<ILawyerProfileCache, LawyerProfileCache>();
         services.AddSingleton<ILawyerSearchCache, LawyerSearchCache>();
+        services.AddScoped<ITrustScoreService, TrustScoreService>();
+        services.AddScoped<IOverdueMilestoneSweepService, OverdueMilestoneSweepService>();
 
         return services;
     }

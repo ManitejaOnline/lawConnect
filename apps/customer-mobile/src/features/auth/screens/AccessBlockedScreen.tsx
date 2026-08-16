@@ -12,10 +12,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Props = {
-  surface: Extract<AppSurface, 'admin-blocked' | 'wrong-app'>;
+  surface: Extract<AppSurface, 'wrong-app'>;
 };
 
-export function AccessBlockedScreen({ surface }: Props) {
+export function AccessBlockedScreen({ surface: _surface }: Props) {
   const theme = useTheme();
   const roles = useAuthStore((s) => s.profile?.roles ?? s.session?.roles ?? []);
   const setIntendedAudience = useAuthStore((s) => s.setIntendedAudience);
@@ -24,13 +24,10 @@ export function AccessBlockedScreen({ surface }: Props) {
     mutationFn: () => authApi.logout(),
   });
 
-  const isAdmin = surface === 'admin-blocked';
-  const title = isAdmin ? 'Admin portal only' : 'Wrong app for this account';
-  const body = isAdmin
-    ? 'Admin accounts cannot sign in to the mobile apps. Use the LawConnect Admin web portal.'
-    : hasRole(roles, AppRoles.Lawyer)
-      ? 'This number is registered as a lawyer. Continue as Lawyer, or sign out and use a customer number.'
-      : 'This number is a customer account. Continue as User, or sign out and use a lawyer number.';
+  const title = 'Wrong app for this account';
+  const body = hasRole(roles, AppRoles.Lawyer)
+    ? 'This number is registered as a lawyer. Continue as Lawyer, or sign out and use a customer number.'
+    : 'This number is a customer account. Continue as User, or sign out and use a lawyer number.';
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
@@ -55,18 +52,13 @@ export function AccessBlockedScreen({ surface }: Props) {
         </View>
 
         <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
-          {!isAdmin && hasRole(roles, AppRoles.Customer) ? (
+          {hasRole(roles, AppRoles.Customer) ? (
             <Button title="Continue as User" variant="accent" onPress={() => setIntendedAudience('customer')} />
           ) : null}
-          {!isAdmin && hasRole(roles, AppRoles.Lawyer) ? (
+          {hasRole(roles, AppRoles.Lawyer) ? (
             <Button title="Continue as Lawyer" variant="accent" onPress={() => setIntendedAudience('lawyer')} />
           ) : null}
-          <Button
-            title="Sign out"
-            variant={isAdmin ? 'accent' : 'ghost'}
-            loading={logout.isPending}
-            onPress={() => logout.mutate()}
-          />
+          <Button title="Sign out" variant="ghost" loading={logout.isPending} onPress={() => logout.mutate()} />
         </View>
       </View>
     </Screen>

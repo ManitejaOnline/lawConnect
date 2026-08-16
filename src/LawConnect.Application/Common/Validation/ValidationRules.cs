@@ -23,6 +23,8 @@ public static class ValidationRules
     public static readonly HashSet<string> AllowedDocumentContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "image/jpeg",
         "image/png"
     };
@@ -61,5 +63,5 @@ public static class ValidationRules
         ruleBuilder
             .NotEmpty()
             .Must(ct => AllowedDocumentContentTypes.Contains(ct))
-            .WithMessage("Only PDF, JPEG, or PNG documents are allowed.");
+            .WithMessage("Only PDF, DOC, DOCX, JPEG, or PNG documents are allowed.");
 }

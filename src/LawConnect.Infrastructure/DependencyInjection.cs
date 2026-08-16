@@ -102,6 +102,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, Notifications.FirebaseNotificationService>();
         services.AddScoped<IUserNotificationDispatcher, Notifications.UserNotificationDispatcher>();
         services.AddScoped<Persistence.Seeding.DemoDataSeeder>();
+        services.AddScoped<Persistence.Seeding.AdminAccountSeeder>();
         RegisterPaymentProvider(services, configuration);
         RegisterFileStorage(services, configuration);
         services.AddScoped<AuditableEntityInterceptor>();

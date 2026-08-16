@@ -9,6 +9,7 @@ import type {
   LawyerWeeklyAvailability,
   PagedResult,
 } from '@/types/home';
+import { appendPickedFile, type PickedFile } from '@/utils/uploadFile';
 
 function toQuery(params: LawyerSearchParams): Record<string, string | number | boolean> {
   const query: Record<string, string | number | boolean> = {};
@@ -153,14 +154,10 @@ export const lawyersApi = {
     return data;
   },
 
-  uploadDocument: async (documentType: string, file: { uri: string; name: string; mimeType: string }) => {
+  uploadDocument: async (documentType: string, file: PickedFile) => {
     const form = new FormData();
     form.append('documentType', documentType);
-    form.append('file', {
-      uri: file.uri,
-      name: file.name,
-      type: file.mimeType,
-    } as unknown as Blob);
+    appendPickedFile(form, 'file', file);
     const { data } = await apiClient.post('/api/lawyers/me/documents', form, {
       transformRequest: (body) => body,
     });
@@ -209,6 +206,12 @@ export const appointmentsApi = {
     const { data } = await apiClient.post<Appointment>(`/api/appointments/${appointmentId}/cancel`, {
       reason: reason ?? null,
     });
+    return data;
+  },
+
+  /** Reports that the lawyer did not attend. Only callable after the scheduled end time. */
+  reportNoShow: async (appointmentId: string) => {
+    const { data } = await apiClient.post<Appointment>(`/api/appointments/${appointmentId}/report-no-show`);
     return data;
   },
 };

@@ -11,6 +11,8 @@ using LawConnect.Application.Features.Lawyers.Commands.ReopenLawyerApplication;
 using LawConnect.Application.Features.Lawyers.Commands.SaveLawyerApplication;
 using LawConnect.Application.Features.Lawyers.Commands.SetLawyerAvailability;
 using LawConnect.Application.Features.Lawyers.Commands.SubmitLawyerApplication;
+using LawConnect.Application.Features.Lawyers.Commands.SubmitLawyerComplaint;
+using LawConnect.Application.Features.Lawyers.Commands.SubmitLawyerRating;
 using LawConnect.Application.Features.Lawyers.Commands.SetPracticeAreas;
 using LawConnect.Application.Features.Lawyers.Commands.UpdateEmergencyAvailability;
 using LawConnect.Application.Features.Lawyers.Commands.UpdateLawyerEducation;
@@ -24,6 +26,8 @@ using LawConnect.Application.Features.Lawyers.Models;
 using LawConnect.Application.Features.Lawyers.Queries.GetLawyerAvailableSlots;
 using LawConnect.Application.Features.Lawyers.Queries.GetLawyerContact;
 using LawConnect.Application.Features.Lawyers.Queries.GetLawyerProfile;
+using LawConnect.Application.Features.Lawyers.Queries.GetLawyerRating;
+using LawConnect.Application.Features.Lawyers.Queries.GetLawyerTrustScore;
 using LawConnect.Application.Features.Lawyers.Queries.GetMyLawyerAvailability;
 using LawConnect.Application.Features.Lawyers.Queries.GetMyLawyerDocuments;
 using LawConnect.Application.Features.Lawyers.Queries.DownloadLawyerDocument;
@@ -617,7 +621,77 @@ public sealed class LawyersController : ControllerBase
         var result = await _sender.Send(new SetLawyerAvailabilityCommand(request.Slots), cancellationToken);
         return result.ToActionResult();
     }
+
+    /// <summary>
+    /// Submits a 1-5 star rating (with optional review) for a completed engagement.
+    /// </summary>
+    [HttpPost("{lawyerId:guid}/ratings")]
+    [Authorize]
+    [ProducesResponseType(typeof(LawyerRatingSubmittedResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SubmitRating(
+        Guid lawyerId,
+        [FromBody] SubmitLawyerRatingApiRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new SubmitLawyerRatingCommand(lawyerId, request.AppointmentId, request.Stars, request.ReviewText),
+            cancellationToken);
+        return result.ToActionResult();
+    }
+
+    /// <summary>
+    /// Gets a lawyer's aggregate rating.
+    /// </summary>
+    [HttpGet("{lawyerId:guid}/rating")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LawyerRatingSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRating(Guid lawyerId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new GetLawyerRatingQuery(lawyerId), cancellationToken);
+        return result.ToActionResult();
+    }
+
+    /// <summary>
+    /// Gets a lawyer's public Trust Score breakdown. Platform-observed reliability only.
+    /// </summary>
+    [HttpGet("{lawyerId:guid}/trust-score")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LawyerTrustScoreResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTrustScore(Guid lawyerId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new GetLawyerTrustScoreQuery(lawyerId), cancellationToken);
+        return result.ToActionResult();
+    }
+
+    /// <summary>
+    /// Submits a complaint about a lawyer. Always starts Pending — never affects Trust Score
+    /// unless an admin later verifies it.
+    /// </summary>
+    [HttpPost("{lawyerId:guid}/complaints")]
+    [Authorize]
+    [ProducesResponseType(typeof(LawyerComplaintSubmittedResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> SubmitComplaint(
+        Guid lawyerId,
+        [FromBody] SubmitLawyerComplaintApiRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new SubmitLawyerComplaintCommand(lawyerId, request.AppointmentId, request.Category, request.Description),
+            cancellationToken);
+        return result.ToActionResult();
+    }
 }
+
+/// <summary>Submit rating API request.</summary>
+public sealed record SubmitLawyerRatingApiRequest(Guid AppointmentId, int Stars, string? ReviewText);
+
+/// <summary>Submit complaint API request.</summary>
+public sealed record SubmitLawyerComplaintApiRequest(Guid? AppointmentId, string Category, string Description);
 
 /// <summary>Register lawyer API request.</summary>
 public sealed record RegisterLawyerApiRequest(

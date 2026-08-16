@@ -1,22 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { AppModal } from '@/components/ui/Modal';
+import { Rating } from '@/components/ui/Rating';
 import { Text } from '@/components/ui/Text';
+import { TextField } from '@/components/ui/TextField';
 import { Icon } from '@/components/icons/Icon';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import {
+  appointmentKeys,
   useAppointmentQuery,
   useCancelAppointmentMutation,
 } from '@/features/appointments/hooks/useAppointmentQueries';
 import { callUserById } from '@/features/calls/openNativeCall';
 import { chatApi } from '@/services/api/chatApi';
+import { appointmentsApi } from '@/services/api/lawyersApi';
+import { ratingsApi } from '@/services/api/ratingsApi';
 import { useToastStore } from '@/store/toastStore';
 import {
   appointmentPartyName,
@@ -30,6 +36,7 @@ export function AppointmentDetailScreen({
   perspective,
   onBack,
   onOpenChat,
+  onCreateCase,
 }: {
   appointmentId: string;
   perspective: 'lawyer' | 'customer';
@@ -39,15 +46,83 @@ export function AppointmentDetailScreen({
     title: string;
     otherUserId: string;
   }) => void;
+  onCreateCase?: (args: { customerId: string; customerName: string; sourceAppointmentId: string }) => void;
 }) {
   const theme = useTheme();
   const showToast = useToastStore((s) => s.show);
+  const queryClient = useQueryClient();
   const query = useAppointmentQuery(appointmentId);
   const cancel = useCancelAppointmentMutation();
   const item = query.data;
-  const scheduled = String(item?.status ?? '').toLowerCase() === 'scheduled';
+  const status = String(item?.status ?? '').toLowerCase();
+  const scheduled = status === 'scheduled';
+  const completed = status === 'completed';
   const otherUserId = perspective === 'lawyer' ? item?.customerUserId : item?.lawyerUserId;
   const otherName = item ? appointmentPartyName(item, perspective) : '';
+  const canReport =
+    perspective === 'customer' && scheduled && item ? new Date(item.endUtc).getTime() < Date.now() : false;
+
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [stars, setStars] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [complaintCategory, setComplaintCategory] = useState('');
+  const [complaintDescription, setComplaintDescription] = useState('');
+
+  const submitRating = useMutation({
+    mutationFn: () => {
+      if (!item) throw new Error('Missing appointment');
+      return ratingsApi.submit(item.lawyerId, item.id, stars, reviewText.trim() || undefined);
+    },
+    onSuccess: () => {
+      setShowRatingModal(false);
+      setReviewText('');
+      showToast({ title: 'Thanks for your rating', variant: 'success' });
+      void queryClient.invalidateQueries({ queryKey: appointmentKeys.detail(appointmentId) });
+    },
+    onError: (error) => {
+      showToast({
+        title: 'Could not submit rating',
+        message: getErrorMessage(error, 'You may have already rated this appointment'),
+        variant: 'error',
+      });
+    },
+  });
+
+  const submitComplaint = useMutation({
+    mutationFn: () => {
+      if (!item) throw new Error('Missing appointment');
+      return ratingsApi.submitComplaint(item.lawyerId, complaintCategory.trim(), complaintDescription.trim(), item.id);
+    },
+    onSuccess: () => {
+      setShowComplaintModal(false);
+      setComplaintCategory('');
+      setComplaintDescription('');
+      showToast({ title: 'Report submitted', message: 'Our admin team will review it.', variant: 'success' });
+    },
+    onError: (error) => {
+      showToast({
+        title: 'Could not submit report',
+        message: getErrorMessage(error, 'Please try again'),
+        variant: 'error',
+      });
+    },
+  });
+
+  const reportNoShow = useMutation({
+    mutationFn: () => appointmentsApi.reportNoShow(appointmentId),
+    onSuccess: () => {
+      showToast({ title: 'Reported', message: 'Thanks — we recorded this appointment as a no-show.', variant: 'info' });
+      void queryClient.invalidateQueries({ queryKey: appointmentKeys.all });
+    },
+    onError: (error) => {
+      showToast({
+        title: 'Could not report no-show',
+        message: getErrorMessage(error, 'Please try again'),
+        variant: 'error',
+      });
+    },
+  });
 
   const openChat = useMutation({
     mutationFn: async () => {
@@ -73,6 +148,7 @@ export function AppointmentDetailScreen({
   const callLabel = perspective === 'lawyer' ? 'Call Customer' : 'Call Lawyer';
 
   return (
+    <>
     <Screen edges={['top', 'left', 'right']} scroll>
       <ScreenHeader title="Appointment" subtitle="Booking details" onBack={onBack} />
 
@@ -114,6 +190,16 @@ export function AppointmentDetailScreen({
             loading={openChat.isPending}
             onPress={() => openChat.mutate()}
           />
+          {perspective === 'lawyer' && onCreateCase ? (
+            <Button
+              title="Create Case"
+              variant="secondary"
+              leftSlot={<Icon name="briefcase" size={16} color={theme.colors.textPrimary} />}
+              onPress={() =>
+                onCreateCase({ customerId: item.customerId, customerName: otherName, sourceAppointmentId: item.id })
+              }
+            />
+          ) : null}
           {scheduled ? (
             <>
               <Button
@@ -141,10 +227,87 @@ export function AppointmentDetailScreen({
                   )
                 }
               />
+              {canReport ? (
+                <Button
+                  title="Report lawyer no-show"
+                  variant="outline"
+                  loading={reportNoShow.isPending}
+                  onPress={() => reportNoShow.mutate()}
+                />
+              ) : null}
+            </>
+          ) : null}
+          {perspective === 'customer' && completed ? (
+            <>
+              {item.hasRating !== true ? (
+                <Button title="Rate this lawyer" variant="primary" onPress={() => setShowRatingModal(true)} />
+              ) : (
+                <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+                  You've already rated this appointment
+                </Text>
+              )}
+              <Button title="Report an issue" variant="outline" onPress={() => setShowComplaintModal(true)} />
             </>
           ) : null}
         </View>
       )}
     </Screen>
+
+    <AppModal
+      visible={showRatingModal}
+      onClose={() => setShowRatingModal(false)}
+      title="Rate this lawyer"
+      footer={
+        <>
+          <Button title="Submit rating" variant="primary" loading={submitRating.isPending} onPress={() => submitRating.mutate()} />
+          <Button title="Cancel" variant="ghost" onPress={() => setShowRatingModal(false)} />
+        </>
+      }
+    >
+      <View style={{ alignItems: 'center', gap: theme.spacing.md }}>
+        <Rating value={stars} interactive size={32} onChange={setStars} />
+        <TextField
+          label="Review (optional)"
+          value={reviewText}
+          onChangeText={setReviewText}
+          multiline
+          placeholder="How was your consultation?"
+          containerStyle={{ width: '100%' }}
+        />
+      </View>
+    </AppModal>
+
+    <AppModal
+      visible={showComplaintModal}
+      onClose={() => setShowComplaintModal(false)}
+      title="Report an issue"
+      footer={
+        <>
+          <Button
+            title="Submit report"
+            variant="danger"
+            disabled={!complaintCategory.trim() || !complaintDescription.trim()}
+            loading={submitComplaint.isPending}
+            onPress={() => submitComplaint.mutate()}
+          />
+          <Button title="Cancel" variant="ghost" onPress={() => setShowComplaintModal(false)} />
+        </>
+      }
+    >
+      <View style={{ gap: theme.spacing.md }}>
+        <Text variant="body" color="secondary">
+          This is sent to LawConnect admins for review — it will not affect this lawyer's score unless verified.
+        </Text>
+        <TextField label="Category" value={complaintCategory} onChangeText={setComplaintCategory} placeholder="e.g. Missed appointment" />
+        <TextField
+          label="Description"
+          value={complaintDescription}
+          onChangeText={setComplaintDescription}
+          multiline
+          placeholder="What happened?"
+        />
+      </View>
+    </AppModal>
+    </>
   );
 }

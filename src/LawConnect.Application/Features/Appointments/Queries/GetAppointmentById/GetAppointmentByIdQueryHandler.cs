@@ -45,6 +45,10 @@ public sealed class GetAppointmentByIdQueryHandler
             throw new ForbiddenException("You are not allowed to view this appointment.");
         }
 
-        return Result.Success(AppointmentMapper.ToResponse(appointment));
+        bool? hasRating = appointment.Status == Domain.Enums.AppointmentStatus.Completed
+            ? await _dbContext.LawyerRatings.AsNoTracking().AnyAsync(r => r.AppointmentId == appointment.Id, cancellationToken)
+            : null;
+
+        return Result.Success(AppointmentMapper.ToResponse(appointment, hasRating));
     }
 }

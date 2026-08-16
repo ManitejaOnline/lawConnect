@@ -43,4 +43,10 @@ Android emulator should use `http://10.0.2.2:5080` (host loopback), not `localho
 
 ## Production
 
-Set `EXPO_PUBLIC_API_URL` to the real HTTPS API origin before creating a release build.
+Release / EAS `preview` and `production` builds use:
+
+```
+EXPO_PUBLIC_API_URL=https://lawconnect-uddw.onrender.com
+```
+
+Local Expo Go still uses `.env` (LAN or localhost). Do not point `EXPO_PUBLIC_API_URL` at `exp://`.

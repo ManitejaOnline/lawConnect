@@ -89,6 +89,30 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Appointment> Appointments => Set<Appointment>();
 
     /// <inheritdoc />
+    public DbSet<LawyerRating> LawyerRatings => Set<LawyerRating>();
+
+    /// <inheritdoc />
+    public DbSet<LawyerComplaint> LawyerComplaints => Set<LawyerComplaint>();
+
+    /// <inheritdoc />
+    public DbSet<LawyerTrustScoreHistory> LawyerTrustScoreHistories => Set<LawyerTrustScoreHistory>();
+
+    /// <inheritdoc />
+    public DbSet<Case> Cases => Set<Case>();
+
+    /// <inheritdoc />
+    public DbSet<CaseUpdate> CaseUpdates => Set<CaseUpdate>();
+
+    /// <inheritdoc />
+    public DbSet<Hearing> Hearings => Set<Hearing>();
+
+    /// <inheritdoc />
+    public DbSet<CaseMilestone> CaseMilestones => Set<CaseMilestone>();
+
+    /// <inheritdoc />
+    public DbSet<CaseDocument> CaseDocuments => Set<CaseDocument>();
+
+    /// <inheritdoc />
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
     /// <inheritdoc />

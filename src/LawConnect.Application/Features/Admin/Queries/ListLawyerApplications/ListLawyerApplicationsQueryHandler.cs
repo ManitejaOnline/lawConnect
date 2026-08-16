@@ -3,6 +3,7 @@ using LawConnect.Application.Common.Models;
 using LawConnect.Application.Features.Admin.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LawConnect.Application.Features.Admin.Queries.ListLawyerApplications;
 
@@ -13,11 +14,18 @@ public sealed class ListLawyerApplicationsQueryHandler
     : IRequestHandler<ListLawyerApplicationsQuery, Result<PagedResult<AdminLawyerApplicationSummary>>>
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly ILogger<ListLawyerApplicationsQueryHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ListLawyerApplicationsQueryHandler"/> class.
     /// </summary>
-    public ListLawyerApplicationsQueryHandler(IApplicationDbContext dbContext) => _dbContext = dbContext;
+    public ListLawyerApplicationsQueryHandler(
+        IApplicationDbContext dbContext,
+        ILogger<ListLawyerApplicationsQueryHandler> logger)
+    {
+        _dbContext = dbContext;
+        _logger = logger;
+    }
 
     /// <inheritdoc />
     public async Task<Result<PagedResult<AdminLawyerApplicationSummary>>> Handle(
@@ -29,9 +37,9 @@ public sealed class ListLawyerApplicationsQueryHandler
             .ThenInclude(s => s.Specialization)
             .AsQueryable();
 
-        if (request.Status.HasValue)
+        if (request.Statuses is { Count: > 0 } statuses)
         {
-            query = query.Where(l => l.VerificationStatus == request.Status.Value);
+            query = query.Where(l => statuses.Contains(l.VerificationStatus));
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -40,6 +48,12 @@ public sealed class ListLawyerApplicationsQueryHandler
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Admin lawyer query statuses={Statuses} totalCount={TotalCount} returnedIds={LawyerIds}",
+            request.Statuses is null ? "(any)" : string.Join(",", request.Statuses),
+            total,
+            string.Join(",", items.Select(i => i.Id)));
 
         var mapped = items.Select(l => new AdminLawyerApplicationSummary(
             l.Id,
@@ -56,7 +70,10 @@ public sealed class ListLawyerApplicationsQueryHandler
             l.StateName,
             l.CountryName,
             l.YearsOfExperience,
-            l.LawyerSpecializations.Select(s => s.Specialization.Name).ToArray())).ToArray();
+            l.LawyerSpecializations.Select(s => s.Specialization.Name).ToArray(),
+            l.VerifiedAtUtc,
+            l.ReviewedAtUtc,
+            l.ReviewReason)).ToArray();
 
         return Result.Success(new PagedResult<AdminLawyerApplicationSummary>(
             mapped,

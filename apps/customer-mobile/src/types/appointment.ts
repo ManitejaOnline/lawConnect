@@ -1,4 +1,4 @@
-export type AppointmentStatus = 'Scheduled' | 'Cancelled' | 'Completed' | string;
+export type AppointmentStatus = 'Scheduled' | 'Cancelled' | 'Completed' | 'NoShow' | string;
 
 export type Appointment = {
   id: string;
@@ -18,6 +18,8 @@ export type Appointment = {
   cancelledAtUtc?: string | null;
   consultationFeeSnapshot: number;
   timeZoneId: string;
+  /** Only populated by the appointment-detail fetch; null on list endpoints. */
+  hasRating?: boolean | null;
 };
 
 export type AppointmentsPage = {

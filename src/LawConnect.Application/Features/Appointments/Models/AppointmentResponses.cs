@@ -20,7 +20,8 @@ public sealed record AppointmentResponse(
     string? CancellationReason,
     DateTime? CancelledAtUtc,
     decimal ConsultationFeeSnapshot,
-    string TimeZoneId);
+    string TimeZoneId,
+    bool? HasRating = null);
 
 /// <summary>
 /// Available slot response.

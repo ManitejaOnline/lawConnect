@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type { UserProfile } from '@/types/home';
+import { appendPickedFile, type PickedFile } from '@/utils/uploadFile';
 
 export const usersApi = {
   me: async () => {
@@ -7,13 +8,9 @@ export const usersApi = {
     return data;
   },
 
-  uploadProfilePicture: async (file: { uri: string; name: string; mimeType: string }) => {
+  uploadProfilePicture: async (file: PickedFile) => {
     const form = new FormData();
-    form.append('file', {
-      uri: file.uri,
-      name: file.name,
-      type: file.mimeType,
-    } as unknown as Blob);
+    appendPickedFile(form, 'file', file);
     const { data } = await apiClient.post<UserProfile>('/api/users/me/profile-picture', form, {
       transformRequest: (body) => body,
     });

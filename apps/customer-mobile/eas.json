@@ -12,14 +12,29 @@
       }
     },
     "preview": {
+      "developmentClient": false,
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://lawconnect-uddw.onrender.com",
+        "NPM_CONFIG_PRODUCTION": "false"
       }
     },
     "production": {
+      "developmentClient": false,
+      "distribution": "store",
+      "prebuildCommand": "prebuild --no-install --clean",
+      "cache": {
+        "disabled": true
+      },
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://lawconnect-uddw.onrender.com",
+        "NPM_CONFIG_PRODUCTION": "false"
       }
     }
   }

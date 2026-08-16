@@ -8,6 +8,7 @@ import { AccessBlockedScreen } from '@/features/auth/screens/AccessBlockedScreen
 import { SplashScreen } from '@/features/auth/screens/SplashScreen';
 import { LawyerOnboardingScreen } from '@/features/lawyer/screens/LawyerOnboardingScreen';
 import { LawyerPendingScreen } from '@/features/lawyer/screens/LawyerPendingScreen';
+import { AdminTabNavigator } from '@/navigation/AdminTabNavigator';
 import { AuthNavigator } from '@/navigation/AuthNavigator';
 import { EmergencyNavigator } from '@/navigation/EmergencyNavigator';
 import { LawyerTabNavigator } from '@/navigation/LawyerTabNavigator';
@@ -60,8 +61,8 @@ export function RootNavigator() {
   const showLawyerHome = authenticated && surface === 'lawyer-home';
   const showLawyerOnboarding = authenticated && surface === 'lawyer-onboarding';
   const showLawyerPending = authenticated && surface === 'lawyer-pending';
-  const showBlocked =
-    authenticated && (surface === 'admin-blocked' || surface === 'wrong-app');
+  const showAdmin = authenticated && surface === 'admin';
+  const showBlocked = authenticated && surface === 'wrong-app';
 
   return (
     <NavigationContainer theme={navTheme} ref={navigationRef}>
@@ -81,14 +82,10 @@ export function RootNavigator() {
           <Stack.Screen name="LawyerOnboarding" component={LawyerOnboardingScreen} />
         ) : showLawyerPending ? (
           <Stack.Screen name="LawyerPending" component={LawyerPendingScreen} />
+        ) : showAdmin ? (
+          <Stack.Screen name="AdminMain" component={AdminTabNavigator} />
         ) : showBlocked ? (
-          <Stack.Screen name="AccessBlocked">
-            {() => (
-              <AccessBlockedScreen
-                surface={surface === 'admin-blocked' ? 'admin-blocked' : 'wrong-app'}
-              />
-            )}
-          </Stack.Screen>
+          <Stack.Screen name="AccessBlocked">{() => <AccessBlockedScreen surface="wrong-app" />}</Stack.Screen>
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         )}

@@ -7,6 +7,7 @@ using LawConnect.Domain.Enums;
 using LawConnect.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LawConnect.Application.Features.Admin.Commands.ReviewLawyerApplication;
 
@@ -22,6 +23,7 @@ public sealed class ReviewLawyerApplicationCommandHandler
     private readonly ILawyerProfileCache _cache;
     private readonly ILawyerSearchCache _searchCache;
     private readonly ISender _sender;
+    private readonly ILogger<ReviewLawyerApplicationCommandHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReviewLawyerApplicationCommandHandler"/> class.
@@ -32,7 +34,8 @@ public sealed class ReviewLawyerApplicationCommandHandler
         IDateTimeProvider clock,
         ILawyerProfileCache cache,
         ILawyerSearchCache searchCache,
-        ISender sender)
+        ISender sender,
+        ILogger<ReviewLawyerApplicationCommandHandler> logger)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
@@ -40,6 +43,7 @@ public sealed class ReviewLawyerApplicationCommandHandler
         _cache = cache;
         _searchCache = searchCache;
         _sender = sender;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -83,6 +87,14 @@ public sealed class ReviewLawyerApplicationCommandHandler
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _cache.RemoveAsync(lawyer.Id, cancellationToken);
         await _searchCache.InvalidateAllAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Admin {AdminId} performed {Action} on lawyer {LawyerId}, new VerificationStatus={VerificationStatus}",
+            adminId,
+            request.Action,
+            lawyer.Id,
+            lawyer.VerificationStatus);
+
         return await _sender.Send(new GetLawyerApplicationQuery(lawyer.Id), cancellationToken);
     }
 }

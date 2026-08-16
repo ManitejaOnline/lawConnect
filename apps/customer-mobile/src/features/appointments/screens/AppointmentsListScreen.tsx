@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { Chip } from '@/components/ui/Chip';
+import { IconButton } from '@/components/ui/IconButton';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { AppointmentCard } from '@/features/appointments/components/AppointmentCard';
@@ -30,9 +31,11 @@ const TABS: { key: TabKey; label: string }[] = [
 export function AppointmentsListScreen({
   perspective,
   onOpen,
+  onOpenCases,
 }: {
   perspective: 'lawyer' | 'customer';
   onOpen: (appointmentId: string) => void;
+  onOpenCases?: () => void;
 }) {
   const theme = useTheme();
   const [tab, setTab] = useState<TabKey>('upcoming');
@@ -60,6 +63,11 @@ export function AppointmentsListScreen({
         <ScreenHeader
           title="Appointments"
           subtitle={perspective === 'lawyer' ? 'Your client bookings' : 'Your consultations'}
+          rightSlot={
+            onOpenCases ? (
+              <IconButton name="briefcase" accessibilityLabel="My Cases" onPress={onOpenCases} />
+            ) : undefined
+          }
         />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs, marginBottom: theme.spacing.md }}>
           {TABS.map((entry) => (

@@ -36,6 +36,8 @@ artifacts/
 .env
 .env.*
 !.env.example
+!.env.production
+!**/.env.production
 secrets.json
 **/agora.secrets.*
 
@@ -54,6 +56,9 @@ coverage/
 
 ## Hangfire / local data
 hangfire.db
+
+## Local API file storage (IDs, certificates — never commit)
+src/LawConnect.Api/storage/
 
 ## Docker
 docker-data/

@@ -12,5 +12,8 @@ public enum AppointmentStatus
     Cancelled = 1,
 
     /// <summary>Completed after the scheduled end time.</summary>
-    Completed = 2
+    Completed = 2,
+
+    /// <summary>The lawyer did not attend; reported by the customer after the scheduled end time.</summary>
+    NoShow = 3
 }

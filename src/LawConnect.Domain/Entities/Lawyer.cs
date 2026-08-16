@@ -28,6 +28,9 @@ public sealed class Lawyer : BaseEntity
     public string? ReviewReason { get; set; }
     public DateTime? ReviewedAtUtc { get; set; }
     public Guid? ReviewedByUserId { get; set; }
+    public int? TrustScore { get; set; }
+    public string? TrustLevel { get; set; }
+    public DateTime? TrustScoreUpdatedAtUtc { get; set; }
 
     public User User { get; set; } = null!;
 

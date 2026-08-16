@@ -52,8 +52,8 @@ export function useNetworkStatus(pollMs = 4000): NetworkStatus {
   return status;
 }
 
+/** Device has no network link. Reachability/API failures are not treated as offline. */
 export function useIsOffline(): boolean {
   const status = useNetworkStatus();
-  if (status.isInternetReachable === false) return true;
-  return !status.isConnected;
+  return status.isConnected === false;
 }

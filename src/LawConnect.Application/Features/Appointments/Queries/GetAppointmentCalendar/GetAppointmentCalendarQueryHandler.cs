@@ -48,6 +48,6 @@ public sealed class GetAppointmentCalendarQueryHandler
             .ToListAsync(cancellationToken);
 
         return Result.Success<IReadOnlyList<AppointmentResponse>>(
-            items.Select(AppointmentMapper.ToResponse).ToList());
+            items.Select(a => AppointmentMapper.ToResponse(a)).ToList());
     }
 }

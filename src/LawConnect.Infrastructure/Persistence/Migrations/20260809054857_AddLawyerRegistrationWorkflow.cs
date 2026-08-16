@@ -64,74 +64,20 @@ namespace LawConnect.Infrastructure.Persistence.Migrations
                 maxLength: 128,
                 nullable: true);
 
-            migrationBuilder.AddColumn<string>(
-                name: "CurrentSearchScope",
-                table: "EmergencyRequests",
-                type: "character varying(32)",
-                maxLength: 32,
-                nullable: false,
-                defaultValue: "");
-
-            migrationBuilder.AddColumn<Guid>(
-                name: "CustomerCityId",
-                table: "EmergencyRequests",
-                type: "uuid",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "CustomerCityName",
-                table: "EmergencyRequests",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<Guid>(
-                name: "CustomerCountryId",
-                table: "EmergencyRequests",
-                type: "uuid",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "CustomerCountryName",
-                table: "EmergencyRequests",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<Guid>(
-                name: "CustomerStateId",
-                table: "EmergencyRequests",
-                type: "uuid",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "CustomerStateName",
-                table: "EmergencyRequests",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<double>(
-                name: "Latitude",
-                table: "Cities",
-                type: "double precision",
-                nullable: true);
-
-            migrationBuilder.AddColumn<double>(
-                name: "Longitude",
-                table: "Cities",
-                type: "double precision",
-                nullable: true);
+            // NOTE: this migration originally also added EmergencyRequests.CurrentSearchScope,
+            // CustomerCityId/CityName/CountryId/CountryName/StateId/StateName, Cities.Latitude/
+            // Longitude, and a composite EmergencyRequests index. Those columns/index already
+            // exist in the database (applied — and recorded in __EFMigrationsHistory — by the
+            // 20260808143500_EmergencySosEscalationIndexes and 20260808154500_EmergencyGeoHierarchy
+            // migrations, whose .Designer.cs files are missing from this migrations folder, which
+            // is a separate pre-existing issue). Re-adding them here failed with "column already
+            // exists", so those duplicate operations were removed; only the genuinely new Lawyers
+            // columns/index (needed by the Admin lawyer-verification feature) remain below.
 
             migrationBuilder.CreateIndex(
                 name: "IX_Lawyers_ApplicationSubmittedAtUtc",
                 table: "Lawyers",
                 column: "ApplicationSubmittedAtUtc");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_EmergencyRequests_CustomerCountryId_CustomerStateId_Custome~",
-                table: "EmergencyRequests",
-                columns: new[] { "CustomerCountryId", "CustomerStateId", "CustomerCityId" });
         }
 
         /// <inheritdoc />
@@ -140,10 +86,6 @@ namespace LawConnect.Infrastructure.Persistence.Migrations
             migrationBuilder.DropIndex(
                 name: "IX_Lawyers_ApplicationSubmittedAtUtc",
                 table: "Lawyers");
-
-            migrationBuilder.DropIndex(
-                name: "IX_EmergencyRequests_CustomerCountryId_CustomerStateId_Custome~",
-                table: "EmergencyRequests");
 
             migrationBuilder.DropColumn(
                 name: "ApplicationSubmittedAtUtc",
@@ -176,42 +118,6 @@ namespace LawConnect.Infrastructure.Persistence.Migrations
             migrationBuilder.DropColumn(
                 name: "StateName",
                 table: "Lawyers");
-
-            migrationBuilder.DropColumn(
-                name: "CurrentSearchScope",
-                table: "EmergencyRequests");
-
-            migrationBuilder.DropColumn(
-                name: "CustomerCityId",
-                table: "EmergencyRequests");
-
-            migrationBuilder.DropColumn(
-                name: "CustomerCityName",
-                table: "EmergencyRequests");
-
-            migrationBuilder.DropColumn(
-                name: "CustomerCountryId",
-                table: "EmergencyRequests");
-
-            migrationBuilder.DropColumn(
-                name: "CustomerCountryName",
-                table: "EmergencyRequests");
-
-            migrationBuilder.DropColumn(
-                name: "CustomerStateId",
-                table: "EmergencyRequests");
-
-            migrationBuilder.DropColumn(
-                name: "CustomerStateName",
-                table: "EmergencyRequests");
-
-            migrationBuilder.DropColumn(
-                name: "Latitude",
-                table: "Cities");
-
-            migrationBuilder.DropColumn(
-                name: "Longitude",
-                table: "Cities");
         }
     }
 }

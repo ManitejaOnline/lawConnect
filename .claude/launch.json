@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "customer-mobile-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "web", "--prefix", "apps/customer-mobile"],
+      "port": 8081
+    },
+    {
+      "name": "lawconnect-api",
+      "url": "http://localhost:5080",
+      "port": 5080
+    }
+  ]
+}

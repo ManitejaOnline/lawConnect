@@ -9,6 +9,7 @@ using LawConnect.Domain.Exceptions;
 using LawConnect.Shared.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LawConnect.Application.Features.Auth.Commands.RegisterLawyerAccount;
 
@@ -21,6 +22,7 @@ public sealed class RegisterLawyerAccountCommandHandler
     private readonly IApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IAuthTokenIssuer _tokenIssuer;
+    private readonly ILogger<RegisterLawyerAccountCommandHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterLawyerAccountCommandHandler"/> class.
@@ -28,11 +30,13 @@ public sealed class RegisterLawyerAccountCommandHandler
     public RegisterLawyerAccountCommandHandler(
         IApplicationDbContext dbContext,
         IPasswordHasher passwordHasher,
-        IAuthTokenIssuer tokenIssuer)
+        IAuthTokenIssuer tokenIssuer,
+        ILogger<RegisterLawyerAccountCommandHandler> logger)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _tokenIssuer = tokenIssuer;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -86,6 +90,13 @@ public sealed class RegisterLawyerAccountCommandHandler
         _dbContext.Users.Add(user);
         _dbContext.Lawyers.Add(lawyer);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Registered lawyer {LawyerId} for user {UserId} with VerificationStatus={VerificationStatus} IsVerified={IsVerified}",
+            lawyer.Id,
+            user.Id,
+            lawyer.VerificationStatus,
+            lawyer.IsVerified);
 
         var roles = new[] { Roles.Lawyer };
         var tokens = await _tokenIssuer.IssueTokensAsync(

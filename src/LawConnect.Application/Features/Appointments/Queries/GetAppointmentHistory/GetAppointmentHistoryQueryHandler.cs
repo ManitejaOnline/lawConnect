@@ -56,7 +56,7 @@ public sealed class GetAppointmentHistoryQueryHandler
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedResult<AppointmentResponse>(
-            items.Select(AppointmentMapper.ToResponse).ToList(),
+            items.Select(a => AppointmentMapper.ToResponse(a)).ToList(),
             total,
             pagination.PageNumber,
             pagination.PageSize));

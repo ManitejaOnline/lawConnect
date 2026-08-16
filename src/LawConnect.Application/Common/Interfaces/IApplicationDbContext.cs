@@ -77,6 +77,30 @@ public interface IApplicationDbContext
     /// <summary>Gets appointments.</summary>
     DbSet<Appointment> Appointments { get; }
 
+    /// <summary>Gets lawyer ratings.</summary>
+    DbSet<LawyerRating> LawyerRatings { get; }
+
+    /// <summary>Gets lawyer complaints.</summary>
+    DbSet<LawyerComplaint> LawyerComplaints { get; }
+
+    /// <summary>Gets Trust Score recalculation history.</summary>
+    DbSet<LawyerTrustScoreHistory> LawyerTrustScoreHistories { get; }
+
+    /// <summary>Gets legal cases.</summary>
+    DbSet<Case> Cases { get; }
+
+    /// <summary>Gets case updates.</summary>
+    DbSet<CaseUpdate> CaseUpdates { get; }
+
+    /// <summary>Gets case hearings.</summary>
+    DbSet<Hearing> Hearings { get; }
+
+    /// <summary>Gets case milestones.</summary>
+    DbSet<CaseMilestone> CaseMilestones { get; }
+
+    /// <summary>Gets case documents.</summary>
+    DbSet<CaseDocument> CaseDocuments { get; }
+
     /// <summary>Gets conversations.</summary>
     DbSet<Conversation> Conversations { get; }
 

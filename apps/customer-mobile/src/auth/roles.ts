@@ -13,7 +13,7 @@ export type AppSurface =
   | 'lawyer-onboarding'
   | 'lawyer-pending'
   | 'wrong-app'
-  | 'admin-blocked';
+  | 'admin';
 
 export function hasRole(roles: readonly string[] | undefined, role: string): boolean {
   return (roles ?? []).some((value) => value.toLowerCase() === role.toLowerCase());
@@ -38,7 +38,7 @@ export function resolveAppSurface(input: {
   if (!authenticated) return 'auth';
 
   if (hasRole(roles, AppRoles.Admin)) {
-    return 'admin-blocked';
+    return 'admin';
   }
 
   const audience =

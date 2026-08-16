@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AppointmentsListScreen } from '@/features/appointments/screens/AppointmentsListScreen';
 import { AppointmentDetailScreen } from '@/features/appointments/screens/AppointmentDetailScreen';
+import { CaseDetailScreen } from '@/features/cases/screens/CaseDetailScreen';
+import { CasesListScreen } from '@/features/cases/screens/CasesListScreen';
 import { CategoriesScreen } from '@/features/home/screens/CategoriesScreen';
 import { CategoryLawyersScreen } from '@/features/home/screens/CategoryLawyersScreen';
 import { HomeScreen } from '@/features/home/screens/HomeScreen';
@@ -15,6 +17,7 @@ import { LawyerAvailabilityScreen } from '@/features/discovery/screens/LawyerAva
 import { LawyerProfileScreen } from '@/features/discovery/screens/LawyerProfileScreen';
 import { LawyerReviewsScreen } from '@/features/discovery/screens/LawyerReviewsScreen';
 import { SearchScreen } from '@/features/discovery/screens/SearchScreen';
+import { TrustScoreDetailScreen } from '@/features/discovery/screens/TrustScoreDetailScreen';
 import { ProfileShellScreen } from '@/features/profile/screens/ProfileShellScreen';
 import { useChatInboxRealtime } from '@/features/chat/hooks/useConversations';
 import { useCustomerEmergencyRealtime } from '@/features/emergency/hooks/useCustomerEmergencyAttention';
@@ -67,6 +70,7 @@ function SearchStackNavigator() {
       <SearchStack.Screen name="LawyerProfile" component={LawyerProfileScreen} />
       <SearchStack.Screen name="LawyerReviews" component={LawyerReviewsScreen} />
       <SearchStack.Screen name="LawyerAvailability" component={LawyerAvailabilityScreen} />
+      <SearchStack.Screen name="TrustScoreDetail" component={TrustScoreDetailScreen} />
     </SearchStack.Navigator>
   );
 }
@@ -80,6 +84,7 @@ function AppointmentsStackNavigator() {
           <AppointmentsListScreen
             perspective="customer"
             onOpen={(appointmentId) => navigation.navigate('AppointmentDetail', { appointmentId })}
+            onOpenCases={() => navigation.navigate('CasesList')}
           />
         )}
       </AppointmentsStack.Screen>
@@ -96,6 +101,20 @@ function AppointmentsStackNavigator() {
               })
             }
           />
+        )}
+      </AppointmentsStack.Screen>
+      <AppointmentsStack.Screen name="CasesList">
+        {({ navigation }) => (
+          <CasesListScreen
+            perspective="customer"
+            onOpen={(caseId) => navigation.navigate('CaseDetail', { caseId })}
+            onBack={() => navigation.goBack()}
+          />
+        )}
+      </AppointmentsStack.Screen>
+      <AppointmentsStack.Screen name="CaseDetail">
+        {({ navigation, route }) => (
+          <CaseDetailScreen caseId={route.params.caseId} perspective="customer" onBack={() => navigation.goBack()} />
         )}
       </AppointmentsStack.Screen>
     </AppointmentsStack.Navigator>

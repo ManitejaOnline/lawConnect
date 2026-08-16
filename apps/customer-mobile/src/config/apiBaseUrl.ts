@@ -13,15 +13,23 @@ export {
   API_DEVICE_NOT_CONFIGURED,
   isExpoBundlerUrl,
   isLoopbackApiUrl,
+  readEnvApiUrl,
 } from '@/config/apiBaseUrlLogic';
 
-const WEB_DEV_DEFAULT = 'http://localhost:5080';
-
-let loggedResolvedUrl: string | null = null;
+let loggedResolvedOrigin: string | null = null;
 
 function isPhysicalNativeDevice(): boolean {
   if (Platform.OS === 'web') return false;
   return Constants.isDevice === true;
+}
+
+function toPublicApiOrigin(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return '(invalid-api-origin)';
+  }
 }
 
 /** Display-only Expo Go / Metro URL. Never used for Axios or SignalR. */
@@ -60,14 +68,11 @@ export function getApiConfigurationError(): string | null {
   return null;
 }
 
-function logResolvedApiUrl(apiBaseUrl: string): void {
-  if (typeof __DEV__ === 'undefined' || !__DEV__) return;
-  if (loggedResolvedUrl === apiBaseUrl) return;
-  loggedResolvedUrl = apiBaseUrl;
-  logger.info('api', 'Connection diagnostic', {
-    expoBundleUrl: getExpoBundleUrl(),
-    apiUrl: apiBaseUrl,
-  });
+function reportApiOriginOnce(apiBaseUrl: string): void {
+  const origin = toPublicApiOrigin(apiBaseUrl);
+  if (loggedResolvedOrigin === origin) return;
+  loggedResolvedOrigin = origin;
+  console.info(`[LawConnect] apiOrigin=${origin}`);
 }
 
 /**
@@ -86,7 +91,18 @@ export function getApiBaseUrl(): string {
     throw new Error(error);
   }
 
-  const url = readEnvApiUrl() ?? WEB_DEV_DEFAULT;
-  logResolvedApiUrl(url);
-  return url;
+  const configured = readEnvApiUrl();
+  if (configured) {
+    reportApiOriginOnce(configured);
+    return configured;
+  }
+
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    const fallback =
+      Platform.OS === 'web' ? 'http://localhost:5080' : 'http://192.168.1.38:5080';
+    reportApiOriginOnce(fallback);
+    return fallback;
+  }
+
+  throw new Error(API_DEVICE_NOT_CONFIGURED);
 }

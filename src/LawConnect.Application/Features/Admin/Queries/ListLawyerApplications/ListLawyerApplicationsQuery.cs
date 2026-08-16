@@ -7,9 +7,11 @@ using MediatR;
 namespace LawConnect.Application.Features.Admin.Queries.ListLawyerApplications;
 
 /// <summary>
-/// Lists lawyer verification applications for admins.
+/// Lists lawyer verification applications for admins. When <paramref name="Statuses"/> has more than
+/// one value (e.g. Pending + UnderReview, both "awaiting an admin decision"), results matching any of
+/// them are returned in a single page.
 /// </summary>
-public sealed record ListLawyerApplicationsQuery(VerificationStatus? Status, int PageNumber, int PageSize)
+public sealed record ListLawyerApplicationsQuery(IReadOnlyList<VerificationStatus>? Statuses, int PageNumber, int PageSize)
     : IRequest<Result<PagedResult<AdminLawyerApplicationSummary>>>;
 
 /// <summary>

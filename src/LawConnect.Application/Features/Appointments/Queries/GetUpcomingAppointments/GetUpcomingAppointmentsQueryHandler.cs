@@ -57,7 +57,7 @@ public sealed class GetUpcomingAppointmentsQueryHandler
             .ToListAsync(cancellationToken);
 
         var page = new PagedResult<AppointmentResponse>(
-            items.Select(AppointmentMapper.ToResponse).ToList(),
+            items.Select(a => AppointmentMapper.ToResponse(a)).ToList(),
             total,
             pagination.PageNumber,
             pagination.PageSize);

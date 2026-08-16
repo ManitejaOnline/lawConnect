@@ -14,7 +14,7 @@ import { Text } from '@/components/ui/Text';
 import { Icon } from '@/components/icons/Icon';
 import { Screen } from '@/components/layout/Screen';
 import { callLawyerById } from '@/features/calls/openNativeCall';
-import { useLawyerProfileQuery } from '@/features/discovery/hooks/useDiscoveryQueries';
+import { useLawyerProfileQuery, useLawyerTrustScoreQuery } from '@/features/discovery/hooks/useDiscoveryQueries';
 import type { SearchStackParamList } from '@/navigation/types';
 import { chatApi } from '@/services/api/chatApi';
 import { useChatStore } from '@/store/chatStore';
@@ -22,6 +22,7 @@ import { useFavoriteLawyersStore } from '@/store/favoriteLawyersStore';
 import { useToastStore } from '@/store/toastStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import { getErrorMessage } from '@/utils/errors';
+import { trustLevelTone } from '@/utils/trustLevel';
 
 type Props = NativeStackScreenProps<SearchStackParamList, 'LawyerProfile'>;
 
@@ -52,6 +53,7 @@ export function LawyerProfileScreen({ navigation, route }: Props) {
   const upsertConversation = useChatStore((s) => s.upsertConversation);
   const { lawyerId } = route.params;
   const profile = useLawyerProfileQuery(lawyerId);
+  const trustScore = useLawyerTrustScoreQuery(lawyerId);
   const favorite = useFavoriteLawyersStore((s) => s.ids.includes(lawyerId));
   const toggleFavorite = useFavoriteLawyersStore((s) => s.toggle);
   const [messaging, setMessaging] = React.useState(false);
@@ -229,6 +231,31 @@ export function LawyerProfileScreen({ navigation, route }: Props) {
           <View style={{ width: 1, backgroundColor: theme.colors.border }} />
           <StatCell label="Fee" value={formatFee(lawyer.consultationFee)} />
         </View>
+
+        {trustScore.data ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('TrustScoreDetail', { lawyerId })}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radius.lg,
+              padding: theme.spacing.md,
+            }}
+          >
+            <Icon name="shield" size={22} color={theme.colors.accent} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="bodyMedium">Trust Score: {trustScore.data.score}/100</Text>
+              <Text variant="caption" color="secondary">
+                Platform-observed reliability — tap for details
+              </Text>
+            </View>
+            <Badge label={trustScore.data.level} tone={trustLevelTone(trustScore.data.level)} />
+          </Pressable>
+        ) : null}
 
         {lawyer.bio ? (
           <View style={{ gap: 6 }}>

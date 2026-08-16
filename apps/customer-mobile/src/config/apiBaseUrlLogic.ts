@@ -28,7 +28,19 @@ export function isLoopbackApiUrl(value: string): boolean {
   }
 }
 
-export function readEnvApiUrl(env: Record<string, string | undefined> = process.env): string | null {
-  const raw = env.EXPO_PUBLIC_API_URL?.trim() || env.EXPO_PUBLIC_API_BASE_URL?.trim() || '';
-  return raw ? raw.replace(/\/$/, '') : null;
+/** Strip trailing slash. Used by tests; does not read process.env. */
+export function normalizeConfiguredApiUrl(raw: string | undefined | null): string | null {
+  const trimmed = raw?.trim() ?? '';
+  return trimmed ? trimmed.replace(/\/$/, '') : null;
+}
+
+/**
+ * Metro/Babel only inlines static `process.env.EXPO_PUBLIC_*` member access.
+ * Do not pass process.env into a parameter and read env.EXPO_PUBLIC_API_URL.
+ */
+export function readEnvApiUrl(): string | null {
+  return (
+    normalizeConfiguredApiUrl(process.env.EXPO_PUBLIC_API_URL) ??
+    normalizeConfiguredApiUrl(process.env.EXPO_PUBLIC_API_BASE_URL)
+  );
 }

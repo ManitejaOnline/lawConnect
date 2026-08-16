@@ -42,6 +42,14 @@ try
         await db.Database.MigrateAsync();
     }
 
+    if (!app.Environment.IsEnvironment("Testing"))
+    {
+        using var scope = app.Services.CreateScope();
+        var adminSeeder = scope.ServiceProvider
+            .GetRequiredService<LawConnect.Infrastructure.Persistence.Seeding.AdminAccountSeeder>();
+        await adminSeeder.SeedAsync();
+    }
+
     app.UseApiPipeline();
     app.Run();
 }

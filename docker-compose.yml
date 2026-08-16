@@ -58,6 +58,8 @@ services:
       Jwt__Secret: ${JWT_SECRET:-ReplaceWithAtLeast32CharacterSecretKey!}
       Jwt__Issuer: ${JWT_ISSUER:-LawConnect}
       Jwt__Audience: ${JWT_AUDIENCE:-LawConnect}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin@lawconnect.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe_StrongPassword!}
     ports:
       - "${API_PORT:-8080}:8080"
     networks:

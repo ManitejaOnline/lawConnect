@@ -29,11 +29,14 @@ export type SearchStackParamList = {
   LawyerProfile: { lawyerId: string };
   LawyerReviews: { lawyerId: string };
   LawyerAvailability: { lawyerId: string };
+  TrustScoreDetail: { lawyerId: string };
 };
 
 export type AppointmentsStackParamList = {
   Appointments: undefined;
   AppointmentDetail: { appointmentId: string };
+  CasesList: undefined;
+  CaseDetail: { caseId: string };
 };
 
 export type ChatStackParamList = {
@@ -77,6 +80,9 @@ export type LawyerHomeStackParamList = {
 export type LawyerAppointmentsStackParamList = {
   LawyerAppointments: undefined;
   LawyerAppointmentDetail: { appointmentId: string };
+  LawyerCasesList: undefined;
+  LawyerCaseDetail: { caseId: string };
+  LawyerCreateCase: { customerId: string; customerName: string; sourceAppointmentId?: string };
 };
 
 export type LawyerEmergencyStackParamList = {
@@ -86,6 +92,36 @@ export type LawyerEmergencyStackParamList = {
 
 export type LawyerProfileStackParamList = {
   LawyerAccount: undefined;
+};
+
+export type AdminLawyersStackParamList = {
+  AdminLawyersList: undefined;
+  AdminLawyerDetail: { lawyerId: string };
+};
+
+export type AdminDashboardStackParamList = {
+  AdminDashboard: undefined;
+  AdminLawyerDetail: { lawyerId: string };
+};
+
+export type AdminComplaintsStackParamList = {
+  AdminComplaintsList: undefined;
+  AdminComplaintDetail: { complaint: import('@/types/api').AdminComplaintSummary };
+};
+
+export type AdminCasesStackParamList = {
+  AdminCasesList: undefined;
+  AdminCaseDetail: { caseId: string };
+};
+
+export type AdminTabParamList = {
+  AdminDashboardTab: undefined;
+  AdminPendingTab: undefined;
+  AdminApprovedTab: undefined;
+  AdminRejectedTab: undefined;
+  AdminComplaintsTab: undefined;
+  AdminCasesTab: undefined;
+  AdminAccountTab: undefined;
 };
 
 export type LawyerTabParamList = {
@@ -122,6 +158,7 @@ export type RootStackParamList = {
     | undefined;
   LawyerOnboarding: undefined;
   LawyerPending: undefined;
+  AdminMain: undefined;
   AccessBlocked: undefined;
   Emergency:
     | {

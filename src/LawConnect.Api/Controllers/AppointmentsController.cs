@@ -2,6 +2,7 @@ using LawConnect.Api.Extensions;
 using LawConnect.Application.Common.Models;
 using LawConnect.Application.Features.Appointments.Commands.BookAppointment;
 using LawConnect.Application.Features.Appointments.Commands.CancelAppointment;
+using LawConnect.Application.Features.Appointments.Commands.ReportNoShow;
 using LawConnect.Application.Features.Appointments.Commands.RescheduleAppointment;
 using LawConnect.Application.Features.Appointments.Models;
 using LawConnect.Application.Features.Appointments.Queries.GetAppointmentById;
@@ -90,6 +91,18 @@ public sealed class AppointmentsController : ControllerBase
                 request.EndUtc,
                 request.TimeZoneId),
             cancellationToken);
+        return result.ToActionResult();
+    }
+
+    /// <summary>
+    /// Reports that the lawyer did not attend a scheduled appointment. Feeds Trust Score.
+    /// </summary>
+    [HttpPost("{appointmentId:guid}/report-no-show")]
+    [ProducesResponseType(typeof(AppointmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReportNoShow(Guid appointmentId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new ReportNoShowCommand(appointmentId), cancellationToken);
         return result.ToActionResult();
     }
 
