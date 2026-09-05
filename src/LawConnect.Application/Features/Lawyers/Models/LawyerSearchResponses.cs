@@ -24,7 +24,9 @@ public sealed record LawyerSearchItemResponse(
     IReadOnlyList<string> Languages,
     double? Latitude,
     double? Longitude,
-    double? DistanceKm);
+    double? DistanceKm,
+    int TrustScore,
+    string TrustLevel);
 
 /// <summary>
 /// Sort fields supported by lawyer discovery.

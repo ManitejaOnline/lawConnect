@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { LawyerSearchItem } from '@/types/home';
+import { trustLevelTone } from '@/utils/trustLevel';
 
 export type LawyerCardProps = {
   lawyer: LawyerSearchItem;
@@ -54,6 +55,9 @@ export function LawyerCard({ lawyer, onPress, compact = false, style }: LawyerCa
                 ({lawyer.ratingCount})
               </Text>
             </Text>
+            {lawyer.trustLevel ? (
+              <Badge label={lawyer.trustLevel} tone={trustLevelTone(lawyer.trustLevel)} />
+            ) : null}
           </View>
           <Text variant="bodyMedium" color="accent">
             {formatFee(lawyer.consultationFee)}

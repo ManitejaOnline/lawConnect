@@ -60,7 +60,7 @@ async function refreshSession(): Promise<AuthSession | null> {
 
   const response = await axios.post<AuthTokenResponse>(`${getApiBaseUrl()}/api/auth/refresh`, payload, {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    timeout: 15000,
+    timeout: 60000,
   });
 
   const tokens = response.data;
@@ -77,7 +77,7 @@ async function refreshSession(): Promise<AuthSession | null> {
 
 function createApiClient(): AxiosInstance {
   const client = axios.create({
-    timeout: 20000,
+    timeout: 60000,
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ function createApiClient(): AxiosInstance {
         !error.response ||
         error.response.status === 408 ||
         error.response.status === 429 ||
-        (error.response.status >= 500 && error.response.status !== 503);
+        error.response.status >= 500;
 
       if (original && isRetriable && retryCount < MAX_RETRIES) {
         original._retryCount = retryCount + 1;

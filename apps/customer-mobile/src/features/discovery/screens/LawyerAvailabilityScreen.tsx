@@ -69,7 +69,7 @@ export function LawyerAvailabilityScreen({ navigation, route }: Props) {
         onSuccess: () => {
           showToast({
             title: 'Appointment booked',
-            message: 'You can manage it from Bookings.',
+            message: 'You can manage it from Appointments.',
             variant: 'success',
           });
           navigation.navigate('LawyerProfile', { lawyerId });

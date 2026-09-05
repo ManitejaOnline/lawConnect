@@ -93,8 +93,11 @@ export const authApi = {
     return applyLogin(data);
   },
 
-  /** Temporary phone login without OTP (API: /api/auth/dev-login). */
+  /** Development-only passwordless login. Production API returns 404 for this route. */
   loginWithPhone: async (phoneNumber: string) => {
+    if (typeof __DEV__ === 'undefined' || !__DEV__) {
+      throw new Error('Phone login without a password is not available.');
+    }
     const deviceIdentifier = await ensureDeviceIdentifier();
     const { data } = await apiClient.post<AuthLoginResponse>('/api/auth/dev-login', {
       phoneNumber,
@@ -163,7 +166,7 @@ export const authApi = {
       },
       {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        timeout: 15000,
+        timeout: 60000,
       },
     );
 

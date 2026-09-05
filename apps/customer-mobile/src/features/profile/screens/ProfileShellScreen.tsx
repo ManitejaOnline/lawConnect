@@ -91,17 +91,7 @@ export function ProfileShellScreen() {
           overflow: 'hidden',
         }}
       >
-        <ProfileMenuItem
-          icon="edit"
-          label="Edit Profile"
-          onPress={() =>
-            showToast({
-              title: 'Profile details',
-              message: 'Name and contact come from your account. Photo upload is available during signup.',
-              variant: 'info',
-            })
-          }
-        />
+        <ProfileMenuItem icon="edit" label="Edit Profile" onPress={() => navigation.navigate('EditProfile')} />
         <ProfileMenuItem
           icon="calendar"
           label="My Appointments"
@@ -113,7 +103,7 @@ export function ProfileShellScreen() {
           onPress={() =>
             showToast({
               title: 'Payments',
-              message: 'Consultation fees are collected when you book. Saved cards are not configured yet.',
+              message: 'Consultation fees are shown when you book. Card checkout is not available in this app yet.',
               variant: 'info',
             })
           }

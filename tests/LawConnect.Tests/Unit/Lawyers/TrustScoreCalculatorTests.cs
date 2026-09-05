@@ -7,10 +7,10 @@ public sealed class TrustScoreCalculatorTests
     // --- Scenario 1: new lawyer with no activity ---
 
     [Fact]
-    public void ClientRatingPoints_NoReviews_ResolvesToNeutralPrior()
+    public void ClientRatingPoints_NoReviews_ResolvesToNeutralPrior_WhenUsedAsComponent()
     {
         var points = TrustScoreCalculator.ClientRatingPoints(0, 0);
-        Assert.Equal(15.0, points, precision: 5); // 3.0/5 prior * 25
+        Assert.Equal(15.0, points, precision: 5); // 3.0/5 prior * 25 — used only after the lawyer has other history
     }
 
     [Fact]
@@ -42,21 +42,79 @@ public sealed class TrustScoreCalculatorTests
     }
 
     [Fact]
-    public void NewLawyer_AllNeutralDefaults_ProducesRealNotZeroNotFabricatedScore()
+    public void HasInsufficientHistory_ZeroReviewsAppointmentsAndCases_IsTrue()
     {
-        var clientRating = TrustScoreCalculator.ClientRatingPoints(0, 0);
-        var reliability = TrustScoreCalculator.AppointmentReliabilityPoints(0, 0, 0);
-        var responsiveness = TrustScoreCalculator.ResponsivenessPoints([]);
-        var caseUpdates = TrustScoreCalculator.CaseUpdatePoints(0, 0);
-        var caseManagement = TrustScoreCalculator.CaseManagementPoints(0, 0);
+        Assert.True(TrustScoreCalculator.HasInsufficientHistory(0, 0, 0));
+    }
+
+    [Fact]
+    public void HasInsufficientHistory_WithRatings_IsFalse()
+    {
+        Assert.False(TrustScoreCalculator.HasInsufficientHistory(1, 0, 0));
+    }
+
+    [Fact]
+    public void HasInsufficientHistory_WithCompletedAppointments_IsFalse()
+    {
+        Assert.False(TrustScoreCalculator.HasInsufficientHistory(0, 1, 0));
+    }
+
+    [Fact]
+    public void HasInsufficientHistory_WithCases_IsFalse()
+    {
+        Assert.False(TrustScoreCalculator.HasInsufficientHistory(0, 0, 1));
+    }
+
+    [Fact]
+    public void NewLawyer_InsufficientHistory_IsNotTrustedAndDoesNotFabricateAHighScore()
+    {
+        var insufficient = TrustScoreCalculator.HasInsufficientHistory(0, 0, 0);
+        var score = TrustScoreCalculator.TotalScore(0, 0, 0, 0, 0, 0);
+        Assert.True(insufficient);
+        Assert.Equal(0, score);
+        Assert.Equal(TrustScoreCalculator.NewLawyerLevel, TrustScoreCalculator.TrustLevel(score, insufficientHistory: true));
+        Assert.NotEqual("Trusted", TrustScoreCalculator.TrustLevel(score, insufficientHistory: true));
+    }
+
+    [Fact]
+    public void EstablishedLawyer_WithRatings_UsesScoreBands()
+    {
+        var clientRating = TrustScoreCalculator.ClientRatingPoints(4.8, 40);
+        var reliability = TrustScoreCalculator.AppointmentReliabilityPoints(20, 0, 0);
+        var responsiveness = TrustScoreCalculator.ResponsivenessPoints([1.0, 0.8]);
+        var caseUpdates = TrustScoreCalculator.CaseUpdatePoints(8, 20);
+        var caseManagement = TrustScoreCalculator.CaseManagementPoints(8, 18);
         var complaints = TrustScoreCalculator.VerifiedComplaintPoints(0, 0);
-
         var score = TrustScoreCalculator.TotalScore(clientRating, reliability, responsiveness, caseUpdates, caseManagement, complaints);
+        Assert.False(TrustScoreCalculator.HasInsufficientHistory(40, 20, 2));
+        Assert.InRange(score, 70, 100);
+        Assert.NotEqual(TrustScoreCalculator.NewLawyerLevel, TrustScoreCalculator.TrustLevel(score));
+    }
 
-        // 15 + 15 + 11.25 + 11.25 + 11.25 + 10 = 73.75 -> 74
-        Assert.Equal(74, score);
-        Assert.True(score is > 0 and < 100, $"expected a real mid-range baseline, got {score}");
-        Assert.Equal("Trusted", TrustScoreCalculator.TrustLevel(score));
+    [Fact]
+    public void LawyerWithCaseHistory_ZeroReviews_IsNotClassifiedAsNewLawyer()
+    {
+        Assert.False(TrustScoreCalculator.HasInsufficientHistory(ratingCount: 0, completedAppointmentCount: 0, caseCount: 3));
+        var caseManagement = Math.Max(0, TrustScoreCalculator.CaseManagementPoints(4, 6) - 5);
+        var score = TrustScoreCalculator.TotalScore(
+            TrustScoreCalculator.ClientRatingPoints(0, 0),
+            TrustScoreCalculator.AppointmentReliabilityPoints(0, 0, 0),
+            TrustScoreCalculator.ResponsivenessPoints([]),
+            TrustScoreCalculator.CaseUpdatePoints(0, 0),
+            caseManagement,
+            TrustScoreCalculator.VerifiedComplaintPoints(0, 0));
+        Assert.NotEqual(TrustScoreCalculator.NewLawyerLevel, TrustScoreCalculator.TrustLevel(score, insufficientHistory: false));
+    }
+
+    [Fact]
+    public void StallingPenalty_ReducesCaseManagementThenTotal_WithoutChangingOtherComponents()
+    {
+        var caseManagement = TrustScoreCalculator.CaseManagementPoints(4, 12);
+        var afterStalling = Math.Max(0, caseManagement - 5);
+        var without = TrustScoreCalculator.TotalScore(20, 18, 12, 12, caseManagement, 10);
+        var with = TrustScoreCalculator.TotalScore(20, 18, 12, 12, afterStalling, 10);
+        Assert.True(with < without);
+        Assert.Equal(5, without - with);
     }
 
     // --- Scenario 2 & 3: 1 five-star review vs. many reviews (Bayesian shrinkage) ---

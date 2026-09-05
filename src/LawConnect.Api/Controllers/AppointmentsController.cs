@@ -2,8 +2,10 @@ using LawConnect.Api.Extensions;
 using LawConnect.Application.Common.Models;
 using LawConnect.Application.Features.Appointments.Commands.BookAppointment;
 using LawConnect.Application.Features.Appointments.Commands.CancelAppointment;
+using LawConnect.Application.Features.Appointments.Commands.CompleteAppointment;
 using LawConnect.Application.Features.Appointments.Commands.ReportNoShow;
 using LawConnect.Application.Features.Appointments.Commands.RescheduleAppointment;
+using LawConnect.Shared.Constants;
 using LawConnect.Application.Features.Appointments.Models;
 using LawConnect.Application.Features.Appointments.Queries.GetAppointmentById;
 using LawConnect.Application.Features.Appointments.Queries.GetAppointmentCalendar;
@@ -91,6 +93,21 @@ public sealed class AppointmentsController : ControllerBase
                 request.EndUtc,
                 request.TimeZoneId),
             cancellationToken);
+        return result.ToActionResult();
+    }
+
+    /// <summary>
+    /// Marks a scheduled appointment completed. Assigned lawyer only, after the slot start.
+    /// </summary>
+    [HttpPost("{appointmentId:guid}/complete")]
+    [Authorize(Policy = PolicyNames.LawyerOnly)]
+    [ProducesResponseType(typeof(AppointmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Complete(Guid appointmentId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new CompleteAppointmentCommand(appointmentId), cancellationToken);
         return result.ToActionResult();
     }
 

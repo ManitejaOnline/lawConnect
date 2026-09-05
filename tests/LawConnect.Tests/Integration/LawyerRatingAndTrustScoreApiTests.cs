@@ -31,8 +31,8 @@ public sealed class LawyerRatingAndTrustScoreApiTests
 
         var body = await response.Content.ReadFromJsonAsync<TrustScoreDto>(LawConnectWebApplicationFactory.JsonOptions);
         Assert.NotNull(body);
-        Assert.True(body.Score is > 0 and < 100, $"expected a real neutral-default baseline, got {body.Score}");
-        Assert.False(string.IsNullOrWhiteSpace(body.Level));
+        Assert.Equal(0, body.Score);
+        Assert.Equal("New Lawyer", body.Level);
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -198,9 +198,11 @@ public sealed class LawyerRatingAndTrustScoreApiTests
             LawConnectWebApplicationFactory.JsonOptions);
         Assert.NotNull(trustScore);
 
-        // Client-cancelled appointments are never counted in either direction, so with zero
-        // lawyer-attributable appointments the component must sit at the neutral "no data" default.
-        Assert.Equal(15.0, trustScore.Breakdown.AppointmentReliability, precision: 1);
+        // Client-cancelled appointments are never a lawyer-attributable sample. With no reviews,
+        // completed appointments, or cases the lawyer is New Lawyer — not a fabricated 15/Trusted.
+        Assert.Equal("New Lawyer", trustScore.Level);
+        Assert.Equal(0, trustScore.Score);
+        Assert.Equal(0.0, trustScore.Breakdown.AppointmentReliability, precision: 1);
     }
 
     [Fact]

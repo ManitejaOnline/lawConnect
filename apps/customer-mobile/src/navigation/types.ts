@@ -35,6 +35,7 @@ export type SearchStackParamList = {
 export type AppointmentsStackParamList = {
   Appointments: undefined;
   AppointmentDetail: { appointmentId: string };
+  RescheduleAppointment: { appointmentId: string; lawyerId: string };
   CasesList: undefined;
   CaseDetail: { caseId: string };
 };
@@ -52,6 +53,7 @@ export type ChatStackParamList = {
 
 export type ProfileStackParamList = {
   Profile: undefined;
+  EditProfile: undefined;
 };
 
 export type MainTabParamList = {
@@ -80,6 +82,7 @@ export type LawyerHomeStackParamList = {
 export type LawyerAppointmentsStackParamList = {
   LawyerAppointments: undefined;
   LawyerAppointmentDetail: { appointmentId: string };
+  LawyerRescheduleAppointment: { appointmentId: string; lawyerId: string };
   LawyerCasesList: undefined;
   LawyerCaseDetail: { caseId: string };
   LawyerCreateCase: { customerId: string; customerName: string; sourceAppointmentId?: string };

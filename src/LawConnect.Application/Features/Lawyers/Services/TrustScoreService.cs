@@ -85,8 +85,33 @@ public sealed class TrustScoreService : ITrustScoreService
         var (stallingDeduction, caseManagementNote) = await ComputeCaseStallingDeductionAsync(lawyerId, lawyer.UserId, now, cancellationToken);
         var caseManagement = Math.Max(0, caseManagementProxy - stallingDeduction);
 
-        var score = TrustScoreCalculator.TotalScore(clientRating, reliability, responsiveness, caseUpdates, caseManagement, complaints);
-        var level = TrustScoreCalculator.TrustLevel(score);
+        var completedAppointmentCount = await _dbContext.Appointments
+            .CountAsync(a => a.LawyerId == lawyerId && a.Status == AppointmentStatus.Completed, cancellationToken);
+        var caseCount = await _dbContext.Cases.CountAsync(c => c.LawyerId == lawyerId, cancellationToken);
+        var insufficientHistory = TrustScoreCalculator.HasInsufficientHistory(
+            lawyer.RatingCount,
+            completedAppointmentCount,
+            caseCount);
+
+        int score;
+        string level;
+        if (insufficientHistory)
+        {
+            clientRating = 0;
+            reliability = 0;
+            responsiveness = 0;
+            caseUpdates = 0;
+            caseManagement = 0;
+            complaints = 0;
+            caseManagementNote = null;
+            score = 0;
+            level = TrustScoreCalculator.NewLawyerLevel;
+        }
+        else
+        {
+            score = TrustScoreCalculator.TotalScore(clientRating, reliability, responsiveness, caseUpdates, caseManagement, complaints);
+            level = TrustScoreCalculator.TrustLevel(score);
+        }
 
         lawyer.TrustScore = score;
         lawyer.TrustLevel = level;

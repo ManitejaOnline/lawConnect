@@ -104,7 +104,7 @@ public static class DependencyInjection
         services.AddScoped<Persistence.Seeding.DemoDataSeeder>();
         services.AddScoped<Persistence.Seeding.AdminAccountSeeder>();
         RegisterPaymentProvider(services, configuration);
-        RegisterFileStorage(services, configuration);
+        RegisterFileStorage(services, configuration, environment);
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<DomainEventDispatchInterceptor>();
 
@@ -304,9 +304,24 @@ public static class DependencyInjection
         }
     }
 
-    private static void RegisterFileStorage(IServiceCollection services, IConfiguration configuration)
+    private static void RegisterFileStorage(
+        IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         var s3 = configuration.GetSection(AwsS3Options.SectionName).Get<AwsS3Options>() ?? new AwsS3Options();
+        if (environment.IsProduction())
+        {
+            if (!s3.Enabled || string.IsNullOrWhiteSpace(s3.BucketName))
+            {
+                throw new InvalidOperationException(
+                    "Production document storage must use AWS S3. Set AwsS3__Enabled=true and AwsS3__BucketName (credentials via AwsS3__AccessKey/AwsS3__SecretKey or the host IAM role). Local disk is not durable on Render.");
+            }
+
+            services.AddSingleton<IFileStorage, S3FileStorage>();
+            return;
+        }
+
         if (s3.Enabled)
         {
             services.AddSingleton<IFileStorage, S3FileStorage>();

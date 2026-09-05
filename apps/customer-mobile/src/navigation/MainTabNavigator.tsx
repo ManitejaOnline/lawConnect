@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AppointmentsListScreen } from '@/features/appointments/screens/AppointmentsListScreen';
 import { AppointmentDetailScreen } from '@/features/appointments/screens/AppointmentDetailScreen';
+import { RescheduleAppointmentScreen } from '@/features/appointments/screens/RescheduleAppointmentScreen';
 import { CaseDetailScreen } from '@/features/cases/screens/CaseDetailScreen';
 import { CasesListScreen } from '@/features/cases/screens/CasesListScreen';
 import { CategoriesScreen } from '@/features/home/screens/CategoriesScreen';
@@ -18,6 +19,7 @@ import { LawyerProfileScreen } from '@/features/discovery/screens/LawyerProfileS
 import { LawyerReviewsScreen } from '@/features/discovery/screens/LawyerReviewsScreen';
 import { SearchScreen } from '@/features/discovery/screens/SearchScreen';
 import { TrustScoreDetailScreen } from '@/features/discovery/screens/TrustScoreDetailScreen';
+import { EditProfileScreen } from '@/features/profile/screens/EditProfileScreen';
 import { ProfileShellScreen } from '@/features/profile/screens/ProfileShellScreen';
 import { useChatInboxRealtime } from '@/features/chat/hooks/useConversations';
 import { useCustomerEmergencyRealtime } from '@/features/emergency/hooks/useCustomerEmergencyAttention';
@@ -100,6 +102,16 @@ function AppointmentsStackNavigator() {
                 params: args,
               })
             }
+            onReschedule={(args) => navigation.navigate('RescheduleAppointment', args)}
+          />
+        )}
+      </AppointmentsStack.Screen>
+      <AppointmentsStack.Screen name="RescheduleAppointment">
+        {({ navigation, route }) => (
+          <RescheduleAppointmentScreen
+            appointmentId={route.params.appointmentId}
+            lawyerId={route.params.lawyerId}
+            onBack={() => navigation.goBack()}
           />
         )}
       </AppointmentsStack.Screen>
@@ -126,6 +138,7 @@ function ProfileStackNavigator() {
   return (
     <ProfileStack.Navigator screenOptions={stackScreenOptions(theme.colors.background)}>
       <ProfileStack.Screen name="Profile" component={ProfileShellScreen} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
     </ProfileStack.Navigator>
   );
 }

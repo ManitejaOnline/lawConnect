@@ -254,6 +254,24 @@ public sealed class CaseManagementApiTests
     }
 
     [Fact]
+    public async Task DocumentDownload_UninvolvedCustomer_Returns403()
+    {
+        var (lawyer, _, customer, _) = await SetUpRelationshipAsync(UniquePhone("28"), UniquePhone("29"), "BAR-CM-0011B");
+        var caseId = await CreateCaseAsync(lawyer, customer.CustomerId);
+        var upload = await UploadCaseDocumentAsync(customer.Client, caseId, "secret.pdf", "application/pdf");
+        Assert.True(upload.IsSuccessStatusCode, await upload.Content.ReadAsStringAsync());
+        var doc = await upload.Content.ReadFromJsonAsync<CaseDocumentDto>(LawConnectWebApplicationFactory.JsonOptions);
+        Assert.NotNull(doc);
+
+        var (uninvolvedCustomer, _) = await _factory.CreateAuthenticatedClientAsync(UniquePhone("30"));
+        var download = await uninvolvedCustomer.GetAsync($"/api/cases/{caseId}/documents/{doc!.Id}/file");
+        Assert.Equal(HttpStatusCode.Forbidden, download.StatusCode);
+
+        var ownerDownload = await customer.Client.GetAsync($"/api/cases/{caseId}/documents/{doc.Id}/file");
+        Assert.True(ownerDownload.IsSuccessStatusCode, await ownerDownload.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task DeleteDocument_PermissionMatrix_UploaderAndCaseLawyerCanDelete_OthersCannot()
     {
         var (lawyer, _, customer, _) = await SetUpRelationshipAsync(UniquePhone("15"), UniquePhone("16"), "BAR-CM-0012");

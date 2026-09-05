@@ -12,8 +12,8 @@ export type AppSurface =
   | 'lawyer-home'
   | 'lawyer-onboarding'
   | 'lawyer-pending'
-  | 'wrong-app'
-  | 'admin';
+  | 'admin'
+  | 'wrong-app';
 
 export function hasRole(roles: readonly string[] | undefined, role: string): boolean {
   return (roles ?? []).some((value) => value.toLowerCase() === role.toLowerCase());

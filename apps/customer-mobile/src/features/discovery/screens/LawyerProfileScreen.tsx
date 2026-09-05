@@ -22,7 +22,7 @@ import { useFavoriteLawyersStore } from '@/store/favoriteLawyersStore';
 import { useToastStore } from '@/store/toastStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import { getErrorMessage } from '@/utils/errors';
-import { trustLevelTone } from '@/utils/trustLevel';
+import { isProvisionalTrustLevel, trustLevelTone } from '@/utils/trustLevel';
 
 type Props = NativeStackScreenProps<SearchStackParamList, 'LawyerProfile'>;
 
@@ -248,9 +248,15 @@ export function LawyerProfileScreen({ navigation, route }: Props) {
           >
             <Icon name="shield" size={22} color={theme.colors.accent} />
             <View style={{ flex: 1, gap: 2 }}>
-              <Text variant="bodyMedium">Trust Score: {trustScore.data.score}/100</Text>
+              <Text variant="bodyMedium">
+                {isProvisionalTrustLevel(trustScore.data.level)
+                  ? `${trustScore.data.level} · ${trustScore.data.score}/100`
+                  : `Trust Score: ${trustScore.data.score}/100`}
+              </Text>
               <Text variant="caption" color="secondary">
-                Platform-observed reliability — tap for details
+                {isProvisionalTrustLevel(trustScore.data.level)
+                  ? 'Not enough ratings, completed appointments, or cases for an earned Trusted level'
+                  : 'Platform-observed reliability — tap for details'}
               </Text>
             </View>
             <Badge label={trustScore.data.level} tone={trustLevelTone(trustScore.data.level)} />

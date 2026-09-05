@@ -8,6 +8,18 @@ export const usersApi = {
     return data;
   },
 
+  update: async (payload: {
+    firstName: string;
+    lastName: string;
+    email?: string | null;
+    dateOfBirth?: string | null;
+    gender?: string | null;
+    preferredLanguage?: string | null;
+  }) => {
+    const { data } = await apiClient.put<UserProfile>('/api/users/me', payload);
+    return data;
+  },
+
   uploadProfilePicture: async (file: PickedFile) => {
     const form = new FormData();
     appendPickedFile(form, 'file', file);

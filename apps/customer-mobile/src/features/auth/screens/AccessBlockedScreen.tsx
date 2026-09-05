@@ -24,8 +24,12 @@ export function AccessBlockedScreen({ surface: _surface }: Props) {
     mutationFn: () => authApi.logout(),
   });
 
-  const title = 'Wrong app for this account';
-  const body = hasRole(roles, AppRoles.Lawyer)
+  const title = hasRole(roles, AppRoles.Admin)
+    ? 'Admin accounts are not supported in this app'
+    : 'Wrong app for this account';
+  const body = hasRole(roles, AppRoles.Admin)
+    ? 'Use the LawConnect admin portal in a browser. This Play Store app is for customers and lawyers only.'
+    : hasRole(roles, AppRoles.Lawyer)
     ? 'This number is registered as a lawyer. Continue as Lawyer, or sign out and use a customer number.'
     : 'This number is a customer account. Continue as User, or sign out and use a lawyer number.';
 

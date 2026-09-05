@@ -27,6 +27,8 @@ export type LawyerSearchItem = {
   ratingAverage: number;
   ratingCount: number;
   verificationStatus: string;
+  trustScore?: number | null;
+  trustLevel?: string | null;
   practiceAreas: string[];
   languages: string[];
   latitude?: number | null;
@@ -191,6 +193,9 @@ export type UserProfile = {
   lastName: string;
   profileImageUrl?: string | null;
   isPhoneVerified: boolean;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  preferredLanguage?: string | null;
   roles: string[];
 };
 

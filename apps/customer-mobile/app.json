@@ -26,6 +26,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.lawconnect.customer",
+      "versionCode": 1,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",

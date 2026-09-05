@@ -37,10 +37,7 @@ public sealed class GetAdminLawyerTrustScoreQueryHandler
             .FirstOrDefaultAsync(l => l.Id == request.LawyerId, cancellationToken)
             ?? throw new NotFoundException(nameof(Lawyer), request.LawyerId);
 
-        if (lawyer.TrustScore is null)
-        {
-            await _trustScoreService.RecalculateAsync(lawyer.Id, cancellationToken);
-        }
+        await _trustScoreService.RecalculateAsync(lawyer.Id, cancellationToken);
 
         var historyRows = await _dbContext.LawyerTrustScoreHistories
             .AsNoTracking()

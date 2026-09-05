@@ -2,8 +2,9 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { AppointmentsListScreen } from '@/features/appointments/screens/AppointmentsListScreen';
 import { AppointmentDetailScreen } from '@/features/appointments/screens/AppointmentDetailScreen';
+import { AppointmentsListScreen } from '@/features/appointments/screens/AppointmentsListScreen';
+import { RescheduleAppointmentScreen } from '@/features/appointments/screens/RescheduleAppointmentScreen';
 import { CaseDetailScreen } from '@/features/cases/screens/CaseDetailScreen';
 import { CasesListScreen } from '@/features/cases/screens/CasesListScreen';
 import { CreateCaseScreen } from '@/features/cases/screens/CreateCaseScreen';
@@ -76,6 +77,16 @@ function LawyerAppointmentsStackNavigator() {
               })
             }
             onCreateCase={(args) => navigation.navigate('LawyerCreateCase', args)}
+            onReschedule={(args) => navigation.navigate('LawyerRescheduleAppointment', args)}
+          />
+        )}
+      </AppointmentsStack.Screen>
+      <AppointmentsStack.Screen name="LawyerRescheduleAppointment">
+        {({ navigation, route }) => (
+          <RescheduleAppointmentScreen
+            appointmentId={route.params.appointmentId}
+            lawyerId={route.params.lawyerId}
+            onBack={() => navigation.goBack()}
           />
         )}
       </AppointmentsStack.Screen>

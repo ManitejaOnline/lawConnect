@@ -6,11 +6,10 @@ namespace LawConnect.Application.Features.Lawyers.Services;
 /// responsible for aggregating raw platform data into the inputs these functions expect.
 /// </summary>
 /// <remarks>
-/// Case Updates and Case Management are proxy signals derived from Appointment/Message activity —
-/// LawConnect has no Case/Hearing/Milestone entity, only single-consultation Appointments. This is
-/// a deliberate scope decision (confirmed), not an oversight: building real case-tracking would be
-/// a separate, much larger feature, and every lawyer would start with "not enough data" until
-/// adopted regardless.
+/// Appointment reliability and chat responsiveness remain appointment/message-derived. Case Updates
+/// and Case Management also use those engagement proxies, while stalling deductions come from real
+/// Case, Hearing, and Milestone activity via <c>TrustScoreService</c>.
+/// Lawyers with no ratings, completed appointments, or cases must not receive an earned Trust level.
 /// </remarks>
 public static class TrustScoreCalculator
 {
@@ -31,6 +30,9 @@ public static class TrustScoreCalculator
 
     /// <summary>Maximum points for the Verified Complaints component.</summary>
     public const double MaxVerifiedComplaints = 10d;
+
+    /// <summary>Display level when the lawyer has no ratings, completed appointments, or cases.</summary>
+    public const string NewLawyerLevel = "New Lawyer";
 
     // Bayesian shrinkage: a lawyer with very few reviews is pulled toward this neutral prior
     // rather than immediately outranking a lawyer with hundreds of reviews at a similar average.
@@ -157,14 +159,28 @@ public static class TrustScoreCalculator
         return (int)Math.Round(Math.Clamp(total, 0, 100), MidpointRounding.AwayFromZero);
     }
 
+    /// <summary>
+    /// True when there is no earned history to score: no reviews, no completed appointments, and no cases.
+    /// </summary>
+    public static bool HasInsufficientHistory(int ratingCount, int completedAppointmentCount, int caseCount) =>
+        ratingCount <= 0 && completedAppointmentCount <= 0 && caseCount <= 0;
+
     /// <summary>Maps a 0-100 Trust Score to its display level per the spec's bands.</summary>
-    public static string TrustLevel(int score) => score switch
+    public static string TrustLevel(int score, bool insufficientHistory = false)
     {
-        >= 90 => "Elite Trusted",
-        >= 80 => "Highly Trusted",
-        >= 70 => "Trusted",
-        >= 60 => "Established",
-        >= 40 => "Needs Improvement",
-        _ => "Low Trust"
-    };
+        if (insufficientHistory)
+        {
+            return NewLawyerLevel;
+        }
+
+        return score switch
+        {
+            >= 90 => "Elite Trusted",
+            >= 80 => "Highly Trusted",
+            >= 70 => "Trusted",
+            >= 60 => "Established",
+            >= 40 => "Needs Improvement",
+            _ => "Low Trust"
+        };
+    }
 }

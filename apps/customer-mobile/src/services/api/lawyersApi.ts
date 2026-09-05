@@ -209,6 +209,19 @@ export const appointmentsApi = {
     return data;
   },
 
+  reschedule: async (
+    appointmentId: string,
+    payload: { startUtc: string; endUtc: string; timeZoneId: string },
+  ) => {
+    const { data } = await apiClient.post<Appointment>(`/api/appointments/${appointmentId}/reschedule`, payload);
+    return data;
+  },
+
+  complete: async (appointmentId: string) => {
+    const { data } = await apiClient.post<Appointment>(`/api/appointments/${appointmentId}/complete`);
+    return data;
+  },
+
   /** Reports that the lawyer did not attend. Only callable after the scheduled end time. */
   reportNoShow: async (appointmentId: string) => {
     const { data } = await apiClient.post<Appointment>(`/api/appointments/${appointmentId}/report-no-show`);

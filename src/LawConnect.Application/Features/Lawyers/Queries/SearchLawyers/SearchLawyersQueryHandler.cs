@@ -19,6 +19,7 @@ public sealed class SearchLawyersQueryHandler
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ILawyerSearchCache _cache;
+    private readonly ITrustScoreService _trustScoreService;
     private readonly ILogger<SearchLawyersQueryHandler> _logger;
 
     /// <summary>
@@ -27,10 +28,12 @@ public sealed class SearchLawyersQueryHandler
     public SearchLawyersQueryHandler(
         IApplicationDbContext dbContext,
         ILawyerSearchCache cache,
+        ITrustScoreService trustScoreService,
         ILogger<SearchLawyersQueryHandler> logger)
     {
         _dbContext = dbContext;
         _cache = cache;
+        _trustScoreService = trustScoreService;
         _logger = logger;
     }
 
@@ -43,7 +46,8 @@ public sealed class SearchLawyersQueryHandler
         var cached = await _cache.GetAsync(cacheKey, cancellationToken);
         if (cached is not null)
         {
-            return Result.Success(cached);
+            var refreshedCached = await ApplyCurrentTrustScoresAsync(cached, cancellationToken);
+            return Result.Success(refreshedCached);
         }
 
         var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
@@ -96,9 +100,51 @@ public sealed class SearchLawyersQueryHandler
         }
 
         var page = new PagedResult<LawyerSearchItemResponse>(items, totalCount, pageNumber, pageSize);
+        page = await ApplyCurrentTrustScoresAsync(page, cancellationToken);
         await _cache.SetAsync(cacheKey, page, cancellationToken);
         _logger.LogDebug("Lawyer search returned {Count}/{Total} results", items.Count, totalCount);
         return Result.Success(page);
+    }
+
+    private async Task<PagedResult<LawyerSearchItemResponse>> ApplyCurrentTrustScoresAsync(
+        PagedResult<LawyerSearchItemResponse> page,
+        CancellationToken cancellationToken)
+    {
+        if (page.Items.Count == 0)
+        {
+            return page;
+        }
+
+        foreach (var item in page.Items)
+        {
+            await _trustScoreService.RecalculateAsync(item.LawyerId, cancellationToken);
+        }
+
+        var ids = page.Items.Select(i => i.LawyerId).ToList();
+        var scores = await _dbContext.Lawyers
+            .AsNoTracking()
+            .Where(l => ids.Contains(l.Id))
+            .Select(l => new { l.Id, l.TrustScore, l.TrustLevel })
+            .ToListAsync(cancellationToken);
+        var byId = scores.ToDictionary(x => x.Id);
+
+        var updated = page.Items.Select(item =>
+        {
+            if (!byId.TryGetValue(item.LawyerId, out var score))
+            {
+                return item;
+            }
+
+            return item with
+            {
+                TrustScore = score.TrustScore ?? 0,
+                TrustLevel = string.IsNullOrWhiteSpace(score.TrustLevel)
+                    ? TrustScoreCalculator.NewLawyerLevel
+                    : score.TrustLevel
+            };
+        }).ToList();
+
+        return new PagedResult<LawyerSearchItemResponse>(updated, page.TotalCount, page.PageNumber, page.PageSize);
     }
 
     private IQueryable<Lawyer> BuildFilteredQuery(SearchLawyersQuery request)
@@ -249,7 +295,11 @@ public sealed class SearchLawyersQueryHandler
             lawyer.Languages.Select(l => l.LanguageName).ToArray(),
             address?.Latitude,
             address?.Longitude,
-            distanceKm);
+            distanceKm,
+            lawyer.TrustScore ?? 0,
+            string.IsNullOrWhiteSpace(lawyer.TrustLevel)
+                ? TrustScoreCalculator.NewLawyerLevel
+                : lawyer.TrustLevel);
     }
 
     private static IQueryable<Lawyer> ApplyDbSort(IQueryable<Lawyer> query, string? sortBy, bool descending)

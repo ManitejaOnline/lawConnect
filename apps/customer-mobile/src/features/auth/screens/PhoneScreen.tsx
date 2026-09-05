@@ -53,7 +53,7 @@ export function PhoneScreen({ navigation }: Props) {
       setFormError(null);
       showToast({
         title: 'Signed in',
-        message: 'OTP is turned off for testing.',
+        message: 'Welcome to LawConnect.',
         variant: 'success',
       });
     },
@@ -95,7 +95,7 @@ export function PhoneScreen({ navigation }: Props) {
 
       <View style={{ gap: theme.spacing.md, marginTop: theme.spacing.xs }}>
         <Text variant="body" color="secondary">
-          Enter your mobile number to continue. OTP is turned off for testing.
+          Enter your mobile number. We will send a one-time verification code.
         </Text>
 
         <Controller

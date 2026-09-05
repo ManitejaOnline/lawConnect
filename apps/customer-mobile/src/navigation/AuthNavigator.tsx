@@ -5,8 +5,6 @@ import { CustomerSignupScreen } from '@/features/auth/screens/CustomerSignupScre
 import { LawyerSignupScreen } from '@/features/auth/screens/LawyerSignupScreen';
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
 import { OnboardingScreen } from '@/features/auth/screens/OnboardingScreen';
-import { OtpScreen } from '@/features/auth/screens/OtpScreen';
-import { PhoneScreen } from '@/features/auth/screens/PhoneScreen';
 import { RoleSelectScreen } from '@/features/auth/screens/RoleSelectScreen';
 import type { AuthStackParamList } from '@/navigation/types';
 import { useAuthStore } from '@/store/authStore';
@@ -33,8 +31,6 @@ export function AuthNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="CustomerSignup" component={CustomerSignupScreen} />
       <Stack.Screen name="LawyerSignup" component={LawyerSignupScreen} />
-      <Stack.Screen name="Phone" component={PhoneScreen} />
-      <Stack.Screen name="Otp" component={OtpScreen} />
     </Stack.Navigator>
   );
 }

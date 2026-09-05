@@ -16,7 +16,7 @@ public sealed class StoragePathTests
     [Fact]
     public void GetPresignedUrl_PrivateKey_IsRejected()
     {
-        Assert.True(StoragePath.IsPrivateKey("private/lawyers/x/documents/a.pdf"));
+        Assert.True(StoragePath.IsPrivateKey("private/cases/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/documents/a.pdf"));
         Assert.False(StoragePath.IsPrivateKey("profiles/avatar.png"));
     }
 }

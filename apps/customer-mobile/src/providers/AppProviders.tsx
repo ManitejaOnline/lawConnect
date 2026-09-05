@@ -69,7 +69,11 @@ export function AppProviders() {
             {apiConfigError ? (
               <ErrorState
                 title={API_DEVICE_NOT_CONFIGURED}
-                message="Set EXPO_PUBLIC_API_URL to http://<PC-LAN-IP>:5080 and restart Expo. Leave the Expo Go exp:// URL unchanged."
+                message={
+                  typeof __DEV__ !== 'undefined' && __DEV__
+                    ? 'Set EXPO_PUBLIC_API_URL to your LawConnect API origin and restart Expo. Do not use the Expo Go exp:// URL as the API.'
+                    : 'This build is missing a production API address. Reinstall the official LawConnect app.'
+                }
               />
             ) : (
               <>

@@ -18,6 +18,7 @@ import {
   appointmentKeys,
   useAppointmentQuery,
   useCancelAppointmentMutation,
+  useCompleteAppointmentMutation,
 } from '@/features/appointments/hooks/useAppointmentQueries';
 import { callUserById } from '@/features/calls/openNativeCall';
 import { chatApi } from '@/services/api/chatApi';
@@ -37,6 +38,7 @@ export function AppointmentDetailScreen({
   onBack,
   onOpenChat,
   onCreateCase,
+  onReschedule,
 }: {
   appointmentId: string;
   perspective: 'lawyer' | 'customer';
@@ -47,12 +49,14 @@ export function AppointmentDetailScreen({
     otherUserId: string;
   }) => void;
   onCreateCase?: (args: { customerId: string; customerName: string; sourceAppointmentId: string }) => void;
+  onReschedule?: (args: { appointmentId: string; lawyerId: string }) => void;
 }) {
   const theme = useTheme();
   const showToast = useToastStore((s) => s.show);
   const queryClient = useQueryClient();
   const query = useAppointmentQuery(appointmentId);
   const cancel = useCancelAppointmentMutation();
+  const complete = useCompleteAppointmentMutation();
   const item = query.data;
   const status = String(item?.status ?? '').toLowerCase();
   const scheduled = status === 'scheduled';
@@ -61,6 +65,8 @@ export function AppointmentDetailScreen({
   const otherName = item ? appointmentPartyName(item, perspective) : '';
   const canReport =
     perspective === 'customer' && scheduled && item ? new Date(item.endUtc).getTime() < Date.now() : false;
+  const canComplete =
+    perspective === 'lawyer' && scheduled && item ? new Date(item.startUtc).getTime() <= Date.now() : false;
 
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [stars, setStars] = useState(5);
@@ -187,6 +193,7 @@ export function AppointmentDetailScreen({
           <Button
             title="Message"
             variant="accent"
+            size="sm"
             loading={openChat.isPending}
             onPress={() => openChat.mutate()}
           />
@@ -194,6 +201,7 @@ export function AppointmentDetailScreen({
             <Button
               title="Create Case"
               variant="secondary"
+              size="sm"
               leftSlot={<Icon name="briefcase" size={16} color={theme.colors.textPrimary} />}
               onPress={() =>
                 onCreateCase({ customerId: item.customerId, customerName: otherName, sourceAppointmentId: item.id })
@@ -205,12 +213,46 @@ export function AppointmentDetailScreen({
               <Button
                 title={callLabel}
                 variant="secondary"
+                size="sm"
                 leftSlot={<Icon name="phone" size={18} color={theme.colors.textPrimary} />}
                 onPress={() => void callUserById(otherUserId)}
               />
+              {onReschedule ? (
+                <Button
+                  title="Reschedule"
+                  variant="outline"
+                  size="sm"
+                  onPress={() => onReschedule({ appointmentId: item.id, lawyerId: item.lawyerId })}
+                />
+              ) : null}
+              {canComplete ? (
+                <Button
+                  title="Mark completed"
+                  variant="primary"
+                  size="sm"
+                  loading={complete.isPending}
+                  onPress={() =>
+                    complete.mutate(item.id, {
+                      onSuccess: () =>
+                        showToast({
+                          title: 'Marked completed',
+                          message: 'The customer can now rate this consultation.',
+                          variant: 'success',
+                        }),
+                      onError: (error) =>
+                        showToast({
+                          title: 'Could not complete',
+                          message: getErrorMessage(error, 'The appointment may not have started yet'),
+                          variant: 'error',
+                        }),
+                    })
+                  }
+                />
+              ) : null}
               <Button
                 title="Cancel appointment"
                 variant="danger"
+                size="sm"
                 loading={cancel.isPending}
                 onPress={() =>
                   cancel.mutate(
@@ -231,6 +273,7 @@ export function AppointmentDetailScreen({
                 <Button
                   title="Report lawyer no-show"
                   variant="outline"
+                  size="sm"
                   loading={reportNoShow.isPending}
                   onPress={() => reportNoShow.mutate()}
                 />
@@ -240,13 +283,13 @@ export function AppointmentDetailScreen({
           {perspective === 'customer' && completed ? (
             <>
               {item.hasRating !== true ? (
-                <Button title="Rate this lawyer" variant="primary" onPress={() => setShowRatingModal(true)} />
+                <Button title="Rate this lawyer" variant="primary" size="sm" onPress={() => setShowRatingModal(true)} />
               ) : (
                 <Text variant="caption" color="secondary" style={{ textAlign: 'center' }}>
                   You've already rated this appointment
                 </Text>
               )}
-              <Button title="Report an issue" variant="outline" onPress={() => setShowComplaintModal(true)} />
+              <Button title="Report an issue" variant="outline" size="sm" onPress={() => setShowComplaintModal(true)} />
             </>
           ) : null}
         </View>

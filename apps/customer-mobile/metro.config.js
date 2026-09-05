@@ -16,4 +16,8 @@ config.resolver.unstable_conditionsByPlatform = {
   web: ['react-native', 'browser', 'require'],
 };
 
+if (config.watcher && Object.prototype.hasOwnProperty.call(config.watcher, 'unstable_workerThreads')) {
+  delete config.watcher.unstable_workerThreads;
+}
+
 module.exports = config;
