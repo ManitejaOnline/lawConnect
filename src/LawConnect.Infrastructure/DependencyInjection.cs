@@ -310,26 +310,21 @@ public static class DependencyInjection
         IHostEnvironment environment)
     {
         var s3 = configuration.GetSection(AwsS3Options.SectionName).Get<AwsS3Options>() ?? new AwsS3Options();
-        if (environment.IsProduction())
+        var useS3 = s3.Enabled && !string.IsNullOrWhiteSpace(s3.BucketName);
+        if (useS3)
         {
-            if (!s3.Enabled || string.IsNullOrWhiteSpace(s3.BucketName))
-            {
-                throw new InvalidOperationException(
-                    "Production document storage must use AWS S3. Set AwsS3__Enabled=true and AwsS3__BucketName (credentials via AwsS3__AccessKey/AwsS3__SecretKey or the host IAM role). Local disk is not durable on Render.");
-            }
-
             services.AddSingleton<IFileStorage, S3FileStorage>();
             return;
         }
 
         if (s3.Enabled)
         {
-            services.AddSingleton<IFileStorage, S3FileStorage>();
+            throw new InvalidOperationException(
+                "AwsS3__Enabled is true but AwsS3__BucketName is empty. Set the bucket name (and credentials or IAM), or set AwsS3__Enabled=false.");
         }
-        else
-        {
-            services.AddSingleton<IFileStorage, LocalFileStorage>();
-        }
+
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
+        _ = environment;
     }
 
     private static string ResolvePostgresConnection(
