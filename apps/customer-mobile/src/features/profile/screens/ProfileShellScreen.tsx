@@ -24,7 +24,7 @@ import { useToastStore } from '@/store/toastStore';
 import { getErrorMessage } from '@/utils/errors';
 
 const modes: ThemeMode[] = ['system', 'light', 'dark'];
-const PRIVACY_POLICY_URL = 'https://lawconnect-uddw.onrender.com/privacy';
+const PRIVACY_POLICY_URL = 'https://github.com/ManitejaOnline/lawConnect/blob/master/docs/privacy-policy.md';
 
 type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<ProfileStackParamList, 'Profile'>,
