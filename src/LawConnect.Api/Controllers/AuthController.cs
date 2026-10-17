@@ -1,3 +1,4 @@
+using LawConnect.Application.Features.Auth.Commands.DeleteAccount;
 using LawConnect.Application.Features.Auth.Commands.DevLogin;
 using LawConnect.Application.Features.Auth.Commands.LoginWithPassword;
 using LawConnect.Application.Features.Auth.Commands.Logout;
@@ -169,6 +170,11 @@ public sealed class AuthController : ControllerBase
         [FromBody] RequestOtpApiRequest request,
         CancellationToken cancellationToken)
     {
+        if (SmsOtpDisabled())
+        {
+            return NotFound();
+        }
+
         var result = await _sender.Send(new RequestOtpCommand(request.PhoneNumber), cancellationToken);
         return result.ToActionResult();
     }
@@ -189,6 +195,11 @@ public sealed class AuthController : ControllerBase
         [FromBody] VerifyOtpApiRequest request,
         CancellationToken cancellationToken)
     {
+        if (SmsOtpDisabled())
+        {
+            return NotFound();
+        }
+
         var command = new VerifyOtpCommand(
             request.PhoneNumber,
             request.Code,
@@ -269,6 +280,26 @@ public sealed class AuthController : ControllerBase
         var result = await _sender.Send(new GetCurrentAuthUserQuery(), cancellationToken);
         return result.ToActionResult();
     }
+
+    /// <summary>
+    /// Deletes the signed-in account. Case and appointment records are kept for the other party.
+    /// </summary>
+    [HttpDelete("account")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new DeleteAccountCommand(HttpContext.Connection.RemoteIpAddress?.ToString()),
+            cancellationToken);
+        return result.ToActionResult();
+    }
+
+    private bool SmsOtpDisabled() =>
+        !_environment.IsEnvironment("Testing")
+        && !_environment.IsDevelopment()
+        && !_environment.IsEnvironment("Docker");
 }
 
 /// <summary>

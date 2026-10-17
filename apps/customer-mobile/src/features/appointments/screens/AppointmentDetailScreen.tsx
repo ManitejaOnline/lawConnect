@@ -21,6 +21,7 @@ import {
   useCompleteAppointmentMutation,
 } from '@/features/appointments/hooks/useAppointmentQueries';
 import { callUserById } from '@/features/calls/openNativeCall';
+import { SharedDocumentsPanel } from '@/features/documents/SharedDocumentsPanel';
 import { chatApi } from '@/services/api/chatApi';
 import { appointmentsApi } from '@/services/api/lawyersApi';
 import { ratingsApi } from '@/services/api/ratingsApi';
@@ -208,6 +209,7 @@ export function AppointmentDetailScreen({
               }
             />
           ) : null}
+          <SharedDocumentsPanel appointmentId={item.id} asLawyer={perspective === 'lawyer'} />
           {scheduled ? (
             <>
               <Button

@@ -45,6 +45,7 @@ public sealed class ChatValidatorAndPresenceTests
     {
         var validator = new CreateChatUploadUrlCommandValidator();
         var result = validator.TestValidate(new CreateChatUploadUrlCommand(
+            Guid.NewGuid(),
             "virus.exe",
             "application/octet-stream",
             1024));

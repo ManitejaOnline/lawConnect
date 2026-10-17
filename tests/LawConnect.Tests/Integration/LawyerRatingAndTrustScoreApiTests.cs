@@ -22,9 +22,16 @@ public sealed class LawyerRatingAndTrustScoreApiTests
     }
 
     [Fact]
-    public async Task NewlyApprovedLawyer_TrustScoreEndpoint_ComputesRealBaselineOnDemand()
+    public async Task NewlyApprovedLawyer_TrustScoreEndpoint_ComputesRealBaselineWithoutWriting()
     {
         var (_, _, lawyerId, admin) = await RegisterAndApproveLawyerAsync(UniquePhone("70"), "BAR-TS-0001");
+
+        int historyCountBefore;
+        using (var before = _factory.Services.CreateScope())
+        {
+            historyCountBefore = await before.ServiceProvider.GetRequiredService<ApplicationDbContext>()
+                .LawyerTrustScoreHistories.CountAsync(h => h.LawyerId == lawyerId);
+        }
 
         var response = await admin.GetAsync($"/api/lawyers/{lawyerId}/trust-score");
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
@@ -37,7 +44,7 @@ public sealed class LawyerRatingAndTrustScoreApiTests
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var historyCount = await db.LawyerTrustScoreHistories.CountAsync(h => h.LawyerId == lawyerId);
-        Assert.True(historyCount >= 1, "GET should have triggered an on-demand recalculation, recorded in history");
+        Assert.Equal(historyCountBefore, historyCount);
     }
 
     [Fact]

@@ -22,8 +22,6 @@ public sealed record LawyerSearchItemResponse(
     string VerificationStatus,
     IReadOnlyList<string> PracticeAreas,
     IReadOnlyList<string> Languages,
-    double? Latitude,
-    double? Longitude,
     double? DistanceKm,
     int TrustScore,
     string TrustLevel);

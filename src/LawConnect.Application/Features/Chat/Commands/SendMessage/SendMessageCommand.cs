@@ -42,5 +42,18 @@ public sealed class SendMessageCommandValidator : AbstractValidator<SendMessageC
                     && !string.IsNullOrWhiteSpace(x.AttachmentContentType)
                     && x.AttachmentFileSizeBytes > 0))
             .WithMessage("Attachment metadata is required for image/PDF messages.");
+        RuleFor(x => x)
+            .Must(BeIssuedChatUploadKey)
+            .When(x => x.Type != MessageType.Text && !string.IsNullOrWhiteSpace(x.AttachmentStorageKey))
+            .WithMessage("Attachment must reference a chat upload for this conversation.");
+    }
+
+    private static bool BeIssuedChatUploadKey(SendMessageCommand command)
+    {
+        var key = command.AttachmentStorageKey!.Trim().Replace('\\', '/');
+        var prefix = $"chat/{command.ConversationId:N}/";
+        return key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && key.Length <= 256
+            && !key.Split('/').Any(segment => segment is "" or "." or "..");
     }
 }

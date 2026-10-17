@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddSignalR();
         services.AddScoped<IChatRealtimePublisher, SignalRChatRealtimePublisher>();
         services.AddScoped<IEmergencyRealtimePublisher, SignalREmergencyRealtimePublisher>();
+        services.AddScoped<LawConnect.Application.Features.Documents.IDocumentTransferNotifier, Realtime.SignalRDocumentTransferNotifier>();
         AddRateLimiting(services, environment);
         AddSwagger(services);
         AddCors(services, configuration);
@@ -202,6 +203,11 @@ public static class WebApplicationExtensions
     /// <returns>The same web application.</returns>
     public static WebApplication UseApiPipeline(this WebApplication app)
     {
+        app.Use((context, next) =>
+        {
+            context.Response.Headers.XContentTypeOptions = "nosniff";
+            return next(context);
+        });
         app.UseMiddleware<Middleware.CorrelationIdMiddleware>();
         app.UseMiddleware<Middleware.ExceptionHandlingMiddleware>();
         app.UseMiddleware<Middleware.RequestPerformanceMiddleware>();
@@ -250,6 +256,20 @@ public static class WebApplicationExtensions
             ? storageOptions.RootPath
             : Path.Combine(app.Environment.ContentRootPath, storageOptions.RootPath);
         Directory.CreateDirectory(storageRoot);
+        var publicFilesPrefix = new PathString(storageOptions.PublicBaseUrl.TrimEnd('/'));
+        app.Use((context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments(publicFilesPrefix, StringComparison.OrdinalIgnoreCase, out var remaining)
+                && remaining.HasValue
+                && (LawConnect.Infrastructure.Storage.StoragePath.IsPrivateKey(remaining.Value)
+                    || LawConnect.Infrastructure.Storage.StoragePath.RequiresSignedAccess(remaining.Value)))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return Task.CompletedTask;
+            }
+
+            return next(context);
+        });
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(storageRoot),
@@ -266,6 +286,7 @@ public static class WebApplicationExtensions
                 }
 
                 if (LawConnect.Infrastructure.Storage.StoragePath.IsPrivateKey(relative)
+                    || LawConnect.Infrastructure.Storage.StoragePath.RequiresSignedAccess(relative)
                     || path.Contains("/private/", StringComparison.OrdinalIgnoreCase))
                 {
                     ctx.Context.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -293,9 +314,12 @@ public static class WebApplicationExtensions
             seeder.SeedAsync().GetAwaiter().GetResult();
         }
 
+        app.MapGet("/privacy", () => Results.Content(PrivacyPolicyPage.Html, "text/html; charset=utf-8"))
+            .AllowAnonymous();
         app.MapControllers();
         app.MapHub<Hubs.ChatHub>("/hubs/chat");
         app.MapHub<Hubs.EmergencyHub>("/hubs/emergency");
+        app.MapHub<Hubs.DocumentHub>("/hubs/documents");
         app.MapHealthChecks("/health");
 
         return app;

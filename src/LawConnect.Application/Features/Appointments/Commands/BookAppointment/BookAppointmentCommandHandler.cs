@@ -22,6 +22,7 @@ public sealed class BookAppointmentCommandHandler
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentCustomerService _currentCustomer;
     private readonly IAppointmentSlotValidator _slotValidator;
+    private readonly ILawyerScheduleGuard _scheduleGuard;
     private readonly IUserNotificationDispatcher _notificationDispatcher;
     private readonly ILogger<BookAppointmentCommandHandler> _logger;
 
@@ -32,12 +33,14 @@ public sealed class BookAppointmentCommandHandler
         IApplicationDbContext dbContext,
         ICurrentCustomerService currentCustomer,
         IAppointmentSlotValidator slotValidator,
+        ILawyerScheduleGuard scheduleGuard,
         IUserNotificationDispatcher notificationDispatcher,
         ILogger<BookAppointmentCommandHandler> logger)
     {
         _dbContext = dbContext;
         _currentCustomer = currentCustomer;
         _slotValidator = slotValidator;
+        _scheduleGuard = scheduleGuard;
         _notificationDispatcher = notificationDispatcher;
         _logger = logger;
     }
@@ -53,14 +56,6 @@ public sealed class BookAppointmentCommandHandler
             .FirstOrDefaultAsync(l => l.Id == request.LawyerId, cancellationToken)
             ?? throw new NotFoundException(nameof(Lawyer), request.LawyerId);
 
-        await _slotValidator.ValidateAsync(
-            request.LawyerId,
-            request.StartUtc,
-            request.EndUtc,
-            request.TimeZoneId.Trim(),
-            null,
-            cancellationToken);
-
         var appointment = new Appointment
         {
             CustomerId = customer.Id,
@@ -73,8 +68,19 @@ public sealed class BookAppointmentCommandHandler
             TimeZoneId = request.TimeZoneId.Trim()
         };
 
-        _dbContext.Appointments.Add(appointment);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _scheduleGuard.RunExclusiveAsync(lawyer.Id, async ct =>
+        {
+            await _slotValidator.ValidateAsync(
+                request.LawyerId,
+                request.StartUtc,
+                request.EndUtc,
+                request.TimeZoneId.Trim(),
+                null,
+                ct);
+
+            _dbContext.Appointments.Add(appointment);
+            return await _dbContext.SaveChangesAsync(ct);
+        }, cancellationToken);
 
         var loaded = await LoadAsync(appointment.Id, cancellationToken);
         _logger.LogInformation(

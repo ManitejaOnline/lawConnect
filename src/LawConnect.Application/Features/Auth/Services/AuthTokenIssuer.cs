@@ -86,7 +86,7 @@ public sealed class AuthTokenIssuer : IAuthTokenIssuer
         _dbContext.RefreshTokens.Add(new RefreshToken
         {
             UserId = user.Id,
-            Token = refreshTokenValue,
+            Token = _tokenHasher.Hash(refreshTokenValue),
             ExpiresAtUtc = refreshExpiresAt,
             CreatedByIp = ipAddress
         });

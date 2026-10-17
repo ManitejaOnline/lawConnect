@@ -49,7 +49,12 @@ export const chatApi = {
     await apiClient.delete(`/api/chat/messages/${messageId}`);
   },
 
-  signUpload: async (input: { fileName: string; contentType: string; fileSizeBytes: number }) => {
+  signUpload: async (input: {
+    conversationId: string;
+    fileName: string;
+    contentType: string;
+    fileSizeBytes: number;
+  }) => {
     const { data } = await apiClient.post<ChatUploadUrlResponse>('/api/chat/uploads/sign', input);
     return data;
   },

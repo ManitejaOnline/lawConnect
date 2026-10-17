@@ -93,6 +93,9 @@ export function getApiBaseUrl(): string {
 
   const configured = readEnvApiUrl();
   if (configured) {
+    if ((typeof __DEV__ === 'undefined' || !__DEV__) && !configured.startsWith('https://')) {
+      throw new Error(API_DEVICE_NOT_CONFIGURED);
+    }
     reportApiOriginOnce(configured);
     return configured;
   }

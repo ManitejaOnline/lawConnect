@@ -92,7 +92,11 @@ public sealed class GetEmergencyRequestQueryHandler
 
         var isNotifiedLawyer = await _dbContext.EmergencyAssignments
             .AsNoTracking()
-            .AnyAsync(a => a.EmergencyRequestId == sos.Id && a.Lawyer.UserId == userId, cancellationToken);
+            .AnyAsync(
+                a => a.EmergencyRequestId == sos.Id
+                     && a.Lawyer.UserId == userId
+                     && (a.Status == EmergencyAssignmentStatus.Pending || a.Status == EmergencyAssignmentStatus.Accepted),
+                cancellationToken);
 
         if (!isCustomer && !isAssignedLawyer && !isNotifiedLawyer)
         {
@@ -135,7 +139,11 @@ public sealed class GetEmergencyTimelineQueryHandler
 
         var allowed = sos.Customer.UserId == userId
                       || await _dbContext.EmergencyAssignments.AsNoTracking()
-                          .AnyAsync(a => a.EmergencyRequestId == sos.Id && a.Lawyer.UserId == userId, cancellationToken);
+                          .AnyAsync(
+                              a => a.EmergencyRequestId == sos.Id
+                                   && a.Lawyer.UserId == userId
+                                   && (a.Status == EmergencyAssignmentStatus.Pending || a.Status == EmergencyAssignmentStatus.Accepted),
+                              cancellationToken);
         if (!allowed)
         {
             throw new ForbiddenException("You are not allowed to view this SOS timeline.");

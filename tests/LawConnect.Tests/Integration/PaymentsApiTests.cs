@@ -45,6 +45,8 @@ public sealed class PaymentsApiTests
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var entity = await db.Lawyers.FirstAsync(l => l.Id == lawyer.LawyerId);
             entity.IsVerified = true;
+            entity.VerificationStatus = VerificationStatus.Approved;
+            entity.IsAcceptingAppointments = true;
             entity.IsOnline = true;
             entity.IsAvailableForEmergency = true;
             await db.SaveChangesAsync();
@@ -138,7 +140,13 @@ public sealed class PaymentsApiTests
         Assert.NotNull(invoice);
         Assert.False(string.IsNullOrWhiteSpace(invoice.InvoiceNumber));
 
-        var refund = await customer.PostAsJsonAsync(
+        var customerRefund = await customer.PostAsJsonAsync(
+            $"/api/payments/{payment.PaymentId}/refund",
+            new { amount = (decimal?)null, reason = "Self refund", idempotencyKey = "appt-refund-self" });
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, customerRefund.StatusCode);
+
+        var admin = await CreateAdminClientAsync("+919720000099");
+        var refund = await admin.PostAsJsonAsync(
             $"/api/payments/{payment.PaymentId}/refund",
             new { amount = (decimal?)null, reason = "Customer cancelled", idempotencyKey = "appt-refund-1" });
         Assert.True(refund.IsSuccessStatusCode, await refund.Content.ReadAsStringAsync());
@@ -146,7 +154,7 @@ public sealed class PaymentsApiTests
         Assert.NotNull(refundDto);
         Assert.Equal(nameof(RefundStatus.Succeeded), refundDto.Status);
 
-        var refundDup = await customer.PostAsJsonAsync(
+        var refundDup = await admin.PostAsJsonAsync(
             $"/api/payments/{payment.PaymentId}/refund",
             new { amount = (decimal?)null, reason = "Customer cancelled", idempotencyKey = "appt-refund-1" });
         Assert.True(refundDup.IsSuccessStatusCode, await refundDup.Content.ReadAsStringAsync());
@@ -316,6 +324,7 @@ public sealed class PaymentsApiTests
         var lawyer = await db.Lawyers.FindAsync(profile.LawyerId);
         Assert.NotNull(lawyer);
         lawyer.IsVerified = true;
+        lawyer.VerificationStatus = VerificationStatus.Approved;
         lawyer.IsOnline = true;
         lawyer.IsAvailableForEmergency = true;
         lawyer.EmergencyFee = 2000m;
@@ -323,6 +332,22 @@ public sealed class PaymentsApiTests
 
         var (reauthed, _) = await _factory.CreateAuthenticatedClientAsync(phone);
         return (reauthed, profile.LawyerId);
+    }
+
+    private async Task<HttpClient> CreateAdminClientAsync(string phone)
+    {
+        var (_, login) = await _factory.CreateAuthenticatedClientAsync(phone);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var links = await db.UserRoles.Where(ur => ur.UserId == login.UserId).ToListAsync();
+            db.UserRoles.RemoveRange(links);
+            db.UserRoles.Add(new LawConnect.Domain.Entities.UserRole { UserId = login.UserId, RoleId = SeedIds.Roles.Admin });
+            await db.SaveChangesAsync();
+        }
+
+        var (admin, _) = await _factory.CreateAuthenticatedClientAsync(phone);
+        return admin;
     }
 
     private static DateOnly NextMonday()

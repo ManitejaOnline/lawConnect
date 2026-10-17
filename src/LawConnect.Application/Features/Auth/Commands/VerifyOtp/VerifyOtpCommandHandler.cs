@@ -73,16 +73,26 @@ public sealed class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, 
             throw new BusinessRuleException("OTP attempt limit exceeded.", "Auth.OtpMaxAttempts");
         }
 
+        // Commit the attempt before checking the code. The OTP row's concurrency token means only one
+        // of several parallel guesses can commit each increment; the losers are rejected unverified,
+        // so parallel requests cannot get more than MaxAttempts guesses checked.
+        otp.AttemptCount++;
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new UnauthorizedException("Invalid or expired OTP.");
+        }
+
         if (!_tokenHasher.Verify(request.Code.Trim(), otp.CodeHash))
         {
-            otp.AttemptCount++;
-            await _dbContext.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("Invalid or expired OTP.");
         }
 
         otp.IsUsed = true;
         otp.UsedAtUtc = utcNow;
-        otp.AttemptCount++;
 
         var user = await _dbContext.Users
             .Include(u => u.UserRoles)

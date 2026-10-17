@@ -223,6 +223,7 @@ export function useChatThread(conversationId: string) {
       setSending(true);
       try {
         const signed = await chatApi.signUpload({
+          conversationId,
           fileName: input.fileName,
           contentType: input.contentType,
           fileSizeBytes: input.fileSizeBytes,

@@ -134,7 +134,11 @@ public sealed class ChatController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _sender.Send(
-            new CreateChatUploadUrlCommand(request.FileName, request.ContentType, request.FileSizeBytes),
+            new CreateChatUploadUrlCommand(
+                request.ConversationId,
+                request.FileName,
+                request.ContentType,
+                request.FileSizeBytes),
             cancellationToken);
         return result.ToActionResult();
     }
@@ -156,4 +160,8 @@ public sealed record SendMessageApiRequest(
 public sealed record MarkReadApiRequest(Guid MessageId);
 
 /// <summary>Create upload URL API request.</summary>
-public sealed record CreateUploadUrlApiRequest(string FileName, string ContentType, long FileSizeBytes);
+public sealed record CreateUploadUrlApiRequest(
+    Guid ConversationId,
+    string FileName,
+    string ContentType,
+    long FileSizeBytes);

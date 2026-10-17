@@ -10,6 +10,7 @@ namespace LawConnect.Application.Features.Chat.Commands.CreateChatUploadUrl;
 /// Creates a signed upload URL for a chat attachment.
 /// </summary>
 public sealed record CreateChatUploadUrlCommand(
+    Guid ConversationId,
     string FileName,
     string ContentType,
     long FileSizeBytes) : IRequest<Result<ChatUploadUrlResponse>>;
@@ -24,6 +25,7 @@ public sealed class CreateChatUploadUrlCommandValidator : AbstractValidator<Crea
     /// </summary>
     public CreateChatUploadUrlCommandValidator()
     {
+        RuleFor(x => x.ConversationId).NotEmpty();
         RuleFor(x => x.FileName).NotEmpty().MaximumLength(256);
         RuleFor(x => x.ContentType).NotEmpty().MaximumLength(128);
         RuleFor(x => x.FileSizeBytes).GreaterThan(0);

@@ -89,7 +89,15 @@ public sealed class GetCallContactQueryHandler : IRequestHandler<GetCallContactQ
         // Public search and anonymous profile responses still omit phone numbers.
         if (callerIsCustomer && targetIsLawyer)
         {
-            return true;
+            return await _dbContext.Lawyers
+                .AsNoTracking()
+                .AnyAsync(
+                    l => l.UserId == targetUserId
+                         && !l.IsDeleted
+                         && l.IsVerified
+                         && l.VerificationStatus == VerificationStatus.Approved
+                         && l.User.IsActive,
+                    cancellationToken);
         }
 
         var assignedSos = await _dbContext.EmergencyRequests

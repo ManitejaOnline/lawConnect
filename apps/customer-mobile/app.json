@@ -11,8 +11,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.lawconnect.customer",
       "infoPlist": {
-        "NSCameraUsageDescription": "LawConnect needs camera access for video consultations.",
-        "NSMicrophoneUsageDescription": "LawConnect needs microphone access for voice and video calls.",
+        "NSLocationWhenInUseUsageDescription": "LawConnect uses your location to show nearby lawyers.",
         "LSApplicationQueriesSchemes": [
           "tel"
         ]
@@ -29,10 +28,6 @@
       "versionCode": 1,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.BLUETOOTH_CONNECT",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
@@ -68,19 +63,13 @@
       ],
       "expo-document-picker",
       [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow LawConnect to use your camera for video calls.",
-          "microphonePermission": "Allow LawConnect to use your microphone for calls.",
-          "recordAudioAndroid": true
-        }
-      ],
-      [
         "expo-build-properties",
         {
           "android": {
             "minSdkVersion": 24,
-            "usesCleartextTraffic": true,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "usesCleartextTraffic": false,
             "manifestQueries": {
               "intent": [
                 {

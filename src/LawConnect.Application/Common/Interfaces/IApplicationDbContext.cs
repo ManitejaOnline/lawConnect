@@ -101,6 +101,12 @@ public interface IApplicationDbContext
     /// <summary>Gets case documents.</summary>
     DbSet<CaseDocument> CaseDocuments { get; }
 
+    /// <summary>Gets customer documents that stay on the customer's phone.</summary>
+    DbSet<CustomerDocument> CustomerDocuments { get; }
+
+    /// <summary>Gets phone-to-phone document transfer sessions.</summary>
+    DbSet<DocumentTransferSession> DocumentTransferSessions { get; }
+
     /// <summary>Gets conversations.</summary>
     DbSet<Conversation> Conversations { get; }
 

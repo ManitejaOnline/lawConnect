@@ -17,6 +17,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
     private readonly IApplicationDbContext _dbContext;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IAuthTokenIssuer _authTokenIssuer;
+    private readonly ITokenHasher _tokenHasher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RefreshTokenCommandHandler"/> class.
@@ -24,11 +25,13 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
     public RefreshTokenCommandHandler(
         IApplicationDbContext dbContext,
         IDateTimeProvider dateTimeProvider,
-        IAuthTokenIssuer authTokenIssuer)
+        IAuthTokenIssuer authTokenIssuer,
+        ITokenHasher tokenHasher)
     {
         _dbContext = dbContext;
         _dateTimeProvider = dateTimeProvider;
         _authTokenIssuer = authTokenIssuer;
+        _tokenHasher = tokenHasher;
     }
 
     /// <inheritdoc />
@@ -42,7 +45,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             .Include(t => t.User)
             .ThenInclude(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(t => t.Token == request.RefreshToken, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Token == _tokenHasher.Hash(request.RefreshToken), cancellationToken);
 
         if (existingToken is null)
         {
@@ -92,7 +95,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             device,
             cancellationToken);
 
-        existingToken.ReplacedByToken = tokens.RefreshToken;
+        existingToken.ReplacedByToken = _tokenHasher.Hash(tokens.RefreshToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result.Success(tokens);

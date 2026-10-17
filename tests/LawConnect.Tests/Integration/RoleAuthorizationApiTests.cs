@@ -36,6 +36,17 @@ public sealed class RoleAuthorizationApiTests
 
         var admin = await customer.GetAsync("/api/admin/status");
         Assert.Equal(HttpStatusCode.Forbidden, admin.StatusCode);
+
+        var metrics = await customer.GetAsync("/api/emergency/metrics");
+        Assert.Equal(HttpStatusCode.Forbidden, metrics.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_CanReadEmergencyMetrics()
+    {
+        var (admin, _) = await CreateAdminClientAsync("+919730000099");
+        var metrics = await admin.GetAsync("/api/emergency/metrics");
+        Assert.Equal(HttpStatusCode.OK, metrics.StatusCode);
     }
 
     [Fact]

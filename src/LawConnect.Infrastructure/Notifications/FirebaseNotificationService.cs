@@ -46,13 +46,13 @@ public sealed class FirebaseNotificationService : INotificationService
 
         // Production would call FCM HTTP v1 with ServiceAccountPath. Until credentials are configured,
         // pushes are logged so environments without Firebase still function.
+        // Title/body/data can carry private chat text and names, so only metadata is logged.
         _logger.LogInformation(
-            "FCM push ({Enabled}) to {TokenPrefix}… title={Title} body={Body} data={Data}",
+            "FCM push ({Enabled}) to {TokenPrefix}… bodyLength={BodyLength} dataKeys={DataKeys}",
             _options.Enabled,
             deviceToken.Length <= 8 ? deviceToken : deviceToken[..8],
-            title,
-            body,
-            data is null ? "{}" : JsonSerializer.Serialize(data));
+            body?.Length ?? 0,
+            data is null ? string.Empty : string.Join(",", data.Keys));
 
         return Task.CompletedTask;
     }

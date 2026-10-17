@@ -33,6 +33,7 @@ import {
   useSubmitCaseRatingMutation,
   useUploadCaseDocumentMutation,
 } from '@/features/cases/hooks/useCaseQueries';
+import { SharedDocumentsPanel } from '@/features/documents/SharedDocumentsPanel';
 import { ratingsApi } from '@/services/api/ratingsApi';
 import type { CaseStatus, CaseUpdateType, Hearing, HearingStatus } from '@/types/case';
 import { useAuthStore } from '@/store/authStore';
@@ -350,6 +351,7 @@ export function CaseDetailScreen({ caseId, perspective, onBack }: { caseId: stri
               );
             })}
             {!documents.isLoading && (documents.data ?? []).length === 0 ? <Text variant="caption" color="secondary">No documents attached.</Text> : null}
+            <SharedDocumentsPanel caseId={caseId} asLawyer={isLawyer} />
           </View>
         ) : null}
       </View>

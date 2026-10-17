@@ -1,4 +1,5 @@
 using LawConnect.Application.Common.Interfaces;
+using LawConnect.Application.Features.Chat.Services;
 using LawConnect.Application.Common.Models;
 using LawConnect.Application.Features.Chat.Models;
 using LawConnect.Domain.Exceptions;
@@ -17,6 +18,8 @@ public sealed class CreateChatUploadUrlCommandHandler
     private readonly IFileStorage _fileStorage;
     private readonly StorageOptions _storageOptions;
     private readonly AwsS3Options _s3Options;
+    private readonly ICurrentUser _currentUser;
+    private readonly IConversationAccessService _conversationAccess;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateChatUploadUrlCommandHandler"/> class.
@@ -24,11 +27,15 @@ public sealed class CreateChatUploadUrlCommandHandler
     public CreateChatUploadUrlCommandHandler(
         IFileStorage fileStorage,
         IOptions<StorageOptions> storageOptions,
-        IOptions<AwsS3Options> s3Options)
+        IOptions<AwsS3Options> s3Options,
+        ICurrentUser currentUser,
+        IConversationAccessService conversationAccess)
     {
         _fileStorage = fileStorage;
         _storageOptions = storageOptions.Value;
         _s3Options = s3Options.Value;
+        _currentUser = currentUser;
+        _conversationAccess = conversationAccess;
     }
 
     /// <inheritdoc />
@@ -36,6 +43,11 @@ public sealed class CreateChatUploadUrlCommandHandler
         CreateChatUploadUrlCommand request,
         CancellationToken cancellationToken)
     {
+        await _conversationAccess.EnsureParticipantAsync(
+            request.ConversationId,
+            _currentUser.GetRequiredUserId(),
+            cancellationToken);
+
         if (request.FileSizeBytes > _storageOptions.MaxUploadBytes)
         {
             throw new BusinessRuleException(
@@ -47,7 +59,7 @@ public sealed class CreateChatUploadUrlCommandHandler
         var upload = await _fileStorage.CreatePresignedUploadAsync(
             request.FileName,
             request.ContentType,
-            "chat",
+            $"chat/{request.ConversationId:N}",
             validFor,
             cancellationToken);
 

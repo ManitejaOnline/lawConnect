@@ -8,6 +8,7 @@ using LawConnect.Application.Features.Appointments.Services;
 using LawConnect.Application.Features.Auth.Services;
 using LawConnect.Application.Features.Cases.Services;
 using LawConnect.Application.Features.Chat.Services;
+using LawConnect.Application.Features.Documents;
 using LawConnect.Application.Features.Emergency.Services;
 using LawConnect.Application.Features.Lawyers.Services;
 using LawConnect.Application.Features.Payments.Services;
@@ -57,6 +58,8 @@ public static class DependencyInjection
         services.AddScoped<IOutboxWriter, OutboxWriter>();
         services.AddScoped<IOutboxProcessor, OutboxProcessor>();
         services.AddSingleton<IPresenceTracker, PresenceTracker>();
+        services.AddSingleton<IDocumentTransferRelay, DocumentTransferRelay>();
+        services.AddScoped<IDocumentAccess, DocumentAccess>();
         services.AddSingleton<ILawyerProfileCache, LawyerProfileCache>();
         services.AddSingleton<ILawyerSearchCache, LawyerSearchCache>();
         services.AddScoped<ITrustScoreService, TrustScoreService>();

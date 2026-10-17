@@ -37,4 +37,16 @@ public static class StoragePath
         return normalized.StartsWith("private/", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("private-", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Returns whether a storage key may only be downloaded through a signed, expiring URL
+    /// (never through anonymous static file serving).
+    /// </summary>
+    /// <param name="storageKey">Object key or public request path.</param>
+    /// <returns><c>true</c> when the key requires a signed URL.</returns>
+    public static bool RequiresSignedAccess(string storageKey)
+    {
+        var normalized = storageKey.Replace('\\', '/').TrimStart('/');
+        return normalized.StartsWith("chat/", StringComparison.OrdinalIgnoreCase);
+    }
 }

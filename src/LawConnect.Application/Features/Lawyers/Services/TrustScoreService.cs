@@ -19,9 +19,27 @@ public interface ITrustScoreService
     /// <summary>Recalculates and persists one lawyer's Trust Score.</summary>
     Task RecalculateAsync(Guid lawyerId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Computes one lawyer's current Trust Score without persisting anything (safe for read endpoints).
+    /// Returns <c>null</c> when the lawyer does not exist.
+    /// </summary>
+    Task<TrustScoreSnapshot?> ComputeAsync(Guid lawyerId, CancellationToken cancellationToken = default);
+
     /// <summary>Recalculates every approved lawyer — used by the periodic background sweep.</summary>
     Task RecalculateAllApprovedAsync(CancellationToken cancellationToken = default);
 }
+
+/// <summary>A computed Trust Score and its component points.</summary>
+public sealed record TrustScoreSnapshot(
+    int Score,
+    string Level,
+    double ClientRatingPoints,
+    double AppointmentReliabilityPoints,
+    double ResponsivenessPoints,
+    double CaseUpdatePoints,
+    double CaseManagementPoints,
+    double VerifiedComplaintPoints,
+    string? CaseManagementNote);
 
 /// <inheritdoc cref="ITrustScoreService" />
 public sealed class TrustScoreService : ITrustScoreService
@@ -75,6 +93,48 @@ public sealed class TrustScoreService : ITrustScoreService
         }
 
         var now = _clock.UtcNow;
+        var snapshot = await ComputeAsync(lawyer, now, cancellationToken);
+
+        lawyer.TrustScore = snapshot.Score;
+        lawyer.TrustLevel = snapshot.Level;
+        lawyer.TrustScoreUpdatedAtUtc = now;
+
+        _dbContext.LawyerTrustScoreHistories.Add(new LawyerTrustScoreHistory
+        {
+            LawyerId = lawyerId,
+            Score = snapshot.Score,
+            Level = snapshot.Level,
+            ClientRatingPoints = snapshot.ClientRatingPoints,
+            AppointmentReliabilityPoints = snapshot.AppointmentReliabilityPoints,
+            ResponsivenessPoints = snapshot.ResponsivenessPoints,
+            CaseUpdatePoints = snapshot.CaseUpdatePoints,
+            CaseManagementPoints = snapshot.CaseManagementPoints,
+            VerifiedComplaintPoints = snapshot.VerifiedComplaintPoints,
+            CaseManagementNote = snapshot.CaseManagementNote,
+            ComputedAtUtc = now
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Recalculated Trust Score for lawyer {LawyerId}: score={Score} level={Level}",
+            lawyerId,
+            snapshot.Score,
+            snapshot.Level);
+    }
+
+    /// <inheritdoc />
+    public async Task<TrustScoreSnapshot?> ComputeAsync(Guid lawyerId, CancellationToken cancellationToken = default)
+    {
+        var lawyer = await _dbContext.Lawyers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == lawyerId, cancellationToken);
+        return lawyer is null ? null : await ComputeAsync(lawyer, _clock.UtcNow, cancellationToken);
+    }
+
+    private async Task<TrustScoreSnapshot> ComputeAsync(Lawyer lawyer, DateTime now, CancellationToken cancellationToken)
+    {
+        var lawyerId = lawyer.Id;
         var recentCutoff = now - RecentWindow;
 
         var clientRating = await ComputeClientRatingAsync(lawyerId, lawyer, recentCutoff, cancellationToken);
@@ -113,32 +173,16 @@ public sealed class TrustScoreService : ITrustScoreService
             level = TrustScoreCalculator.TrustLevel(score);
         }
 
-        lawyer.TrustScore = score;
-        lawyer.TrustLevel = level;
-        lawyer.TrustScoreUpdatedAtUtc = now;
-
-        _dbContext.LawyerTrustScoreHistories.Add(new LawyerTrustScoreHistory
-        {
-            LawyerId = lawyerId,
-            Score = score,
-            Level = level,
-            ClientRatingPoints = clientRating,
-            AppointmentReliabilityPoints = reliability,
-            ResponsivenessPoints = responsiveness,
-            CaseUpdatePoints = caseUpdates,
-            CaseManagementPoints = caseManagement,
-            VerifiedComplaintPoints = complaints,
-            CaseManagementNote = caseManagementNote,
-            ComputedAtUtc = now
-        });
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Recalculated Trust Score for lawyer {LawyerId}: score={Score} level={Level}",
-            lawyerId,
+        return new TrustScoreSnapshot(
             score,
-            level);
+            level,
+            clientRating,
+            reliability,
+            responsiveness,
+            caseUpdates,
+            caseManagement,
+            complaints,
+            caseManagementNote);
     }
 
     private async Task<double> ComputeClientRatingAsync(
@@ -390,16 +434,16 @@ public sealed class TrustScoreService : ITrustScoreService
         DateTime now,
         CancellationToken cancellationToken)
     {
-        var cases = await _dbContext.Cases.Where(c => c.LawyerId == lawyerId).ToListAsync(cancellationToken);
+        var cases = await _dbContext.Cases.AsNoTracking().Where(c => c.LawyerId == lawyerId).ToListAsync(cancellationToken);
         if (cases.Count == 0)
         {
             return (0, null);
         }
 
         var caseIds = cases.Select(c => c.Id).ToList();
-        var updates = await _dbContext.CaseUpdates.Where(u => caseIds.Contains(u.CaseId)).ToListAsync(cancellationToken);
-        var hearings = await _dbContext.Hearings.Where(h => caseIds.Contains(h.CaseId)).ToListAsync(cancellationToken);
-        var milestones = await _dbContext.CaseMilestones.Where(m => caseIds.Contains(m.CaseId)).ToListAsync(cancellationToken);
+        var updates = await _dbContext.CaseUpdates.AsNoTracking().Where(u => caseIds.Contains(u.CaseId)).ToListAsync(cancellationToken);
+        var hearings = await _dbContext.Hearings.AsNoTracking().Where(h => caseIds.Contains(h.CaseId)).ToListAsync(cancellationToken);
+        var milestones = await _dbContext.CaseMilestones.AsNoTracking().Where(m => caseIds.Contains(m.CaseId)).ToListAsync(cancellationToken);
 
         var statuses = cases.Select(c => CaseActivityCalculator.ComputeStallingStatus(
             c,

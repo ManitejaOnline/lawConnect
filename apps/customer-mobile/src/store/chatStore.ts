@@ -15,13 +15,19 @@ type ChatState = {
   setReaction: (messageId: string, emoji: string | null) => void;
   applyIncomingMessagePreview: (message: ChatMessage, currentUserId: string) => void;
   totalUnread: () => number;
+  reset: () => void;
+};
+
+const initialChatState = {
+  conversations: [] as ConversationListItem[],
+  typingByConversation: {} as Record<string, string | null>,
+  presenceByUser: {} as Record<string, PresenceChangedPayload>,
+  reactions: {} as Record<string, string>,
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  conversations: [],
-  typingByConversation: {},
-  presenceByUser: {},
-  reactions: {},
+  ...initialChatState,
+  reset: () => set(initialChatState),
   setConversations: (conversations) => set({ conversations }),
   upsertConversation: (item) =>
     set((state) => {

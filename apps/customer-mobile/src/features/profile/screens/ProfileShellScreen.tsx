@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -24,6 +24,7 @@ import { useToastStore } from '@/store/toastStore';
 import { getErrorMessage } from '@/utils/errors';
 
 const modes: ThemeMode[] = ['system', 'light', 'dark'];
+const PRIVACY_POLICY_URL = 'https://lawconnect-uddw.onrender.com/privacy';
 
 type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<ProfileStackParamList, 'Profile'>,
@@ -40,6 +41,7 @@ export function ProfileShellScreen() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const profile = userProfile.data;
   const displayName =
@@ -48,6 +50,17 @@ export function ProfileShellScreen() {
     (session ? 'Signed in' : 'Guest');
   const phone = profile?.phoneNumber ?? session?.phoneNumber ?? authProfile?.phoneNumber;
   const email = profile?.email;
+
+  const deleteAccount = useMutation({
+    mutationFn: async () => authApi.deleteAccount(),
+    onSuccess: () => {
+      setDeleteOpen(false);
+      showToast({ title: 'Account deleted', message: 'Your sign-in details have been removed.', variant: 'info' });
+    },
+    onError: (error) => {
+      showToast({ title: 'Could not delete account', message: getErrorMessage(error), variant: 'error' });
+    },
+  });
 
   const logout = useMutation({
     mutationFn: async () => authApi.logout(),
@@ -115,6 +128,14 @@ export function ProfileShellScreen() {
         />
         <ProfileMenuItem icon="help" label="Help & Support" onPress={() => setAboutOpen(true)} />
         <ProfileMenuItem icon="settings" label="Settings" onPress={() => setSettingsOpen(true)} />
+        <ProfileMenuItem
+          icon="help"
+          label="Privacy Policy"
+          onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+        />
+        {session ? (
+          <ProfileMenuItem icon="logout" label="Delete account" danger onPress={() => setDeleteOpen(true)} />
+        ) : null}
         {session ? (
           <ProfileMenuItem icon="logout" label="Logout" danger onPress={() => setLogoutOpen(true)} />
         ) : null}
@@ -139,6 +160,22 @@ export function ProfileShellScreen() {
               onPress={() => theme.setMode(mode)}
             />
           ))}
+        </View>
+      </BottomSheet>
+
+      <BottomSheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete account?">
+        <Text variant="body" color="secondary">
+          This disables sign-in and removes your name, email, phone number, and password. Appointments and cases already shared with a lawyer stay on their record. Phone documents on this device are not uploaded.
+        </Text>
+        <View style={{ marginTop: theme.spacing.lg, gap: theme.spacing.sm }}>
+          <Button
+            title="Delete account"
+            variant="danger"
+            size="sm"
+            loading={deleteAccount.isPending}
+            onPress={() => deleteAccount.mutate()}
+          />
+          <Button title="Cancel" variant="ghost" size="sm" disabled={deleteAccount.isPending} onPress={() => setDeleteOpen(false)} />
         </View>
       </BottomSheet>
 

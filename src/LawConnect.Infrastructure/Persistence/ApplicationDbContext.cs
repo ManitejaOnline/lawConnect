@@ -113,6 +113,12 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<CaseDocument> CaseDocuments => Set<CaseDocument>();
 
     /// <inheritdoc />
+    public DbSet<CustomerDocument> CustomerDocuments => Set<CustomerDocument>();
+
+    /// <inheritdoc />
+    public DbSet<DocumentTransferSession> DocumentTransferSessions => Set<DocumentTransferSession>();
+
+    /// <inheritdoc />
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
     /// <inheritdoc />

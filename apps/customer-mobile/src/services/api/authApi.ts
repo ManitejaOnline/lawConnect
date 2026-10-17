@@ -204,6 +204,13 @@ export const authApi = {
     }
   },
 
+  deleteAccount: async () => {
+    await apiClient.delete('/api/auth/account');
+    useAuthStore.getState().clearSession();
+    const { stopEmergencyHub } = await import('@/services/realtime/emergencyHub');
+    await stopEmergencyHub();
+  },
+
   logout: async () => {
     const session = useAuthStore.getState().session;
     if (session?.refreshToken) {

@@ -195,6 +195,7 @@ public sealed class EmergencyController : ControllerBase
     /// Returns aggregate SOS metrics.
     /// </summary>
     [HttpGet("metrics")]
+    [Authorize(Policy = PolicyNames.AdminOnly)]
     [ProducesResponseType(typeof(EmergencyMetricsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Metrics(CancellationToken cancellationToken)
     {

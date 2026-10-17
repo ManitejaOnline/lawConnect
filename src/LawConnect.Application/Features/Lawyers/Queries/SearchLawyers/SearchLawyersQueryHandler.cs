@@ -19,7 +19,6 @@ public sealed class SearchLawyersQueryHandler
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ILawyerSearchCache _cache;
-    private readonly ITrustScoreService _trustScoreService;
     private readonly ILogger<SearchLawyersQueryHandler> _logger;
 
     /// <summary>
@@ -28,12 +27,10 @@ public sealed class SearchLawyersQueryHandler
     public SearchLawyersQueryHandler(
         IApplicationDbContext dbContext,
         ILawyerSearchCache cache,
-        ITrustScoreService trustScoreService,
         ILogger<SearchLawyersQueryHandler> logger)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _trustScoreService = trustScoreService;
         _logger = logger;
     }
 
@@ -46,8 +43,7 @@ public sealed class SearchLawyersQueryHandler
         var cached = await _cache.GetAsync(cacheKey, cancellationToken);
         if (cached is not null)
         {
-            var refreshedCached = await ApplyCurrentTrustScoresAsync(cached, cancellationToken);
-            return Result.Success(refreshedCached);
+            return Result.Success(cached);
         }
 
         var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
@@ -99,52 +95,12 @@ public sealed class SearchLawyersQueryHandler
                 .ToList();
         }
 
+        // Trust scores are read as stored; they are kept current by event-driven recalculation and the
+        // periodic sweep. This endpoint is anonymous, so it must never write to Lawyer rows.
         var page = new PagedResult<LawyerSearchItemResponse>(items, totalCount, pageNumber, pageSize);
-        page = await ApplyCurrentTrustScoresAsync(page, cancellationToken);
         await _cache.SetAsync(cacheKey, page, cancellationToken);
         _logger.LogDebug("Lawyer search returned {Count}/{Total} results", items.Count, totalCount);
         return Result.Success(page);
-    }
-
-    private async Task<PagedResult<LawyerSearchItemResponse>> ApplyCurrentTrustScoresAsync(
-        PagedResult<LawyerSearchItemResponse> page,
-        CancellationToken cancellationToken)
-    {
-        if (page.Items.Count == 0)
-        {
-            return page;
-        }
-
-        foreach (var item in page.Items)
-        {
-            await _trustScoreService.RecalculateAsync(item.LawyerId, cancellationToken);
-        }
-
-        var ids = page.Items.Select(i => i.LawyerId).ToList();
-        var scores = await _dbContext.Lawyers
-            .AsNoTracking()
-            .Where(l => ids.Contains(l.Id))
-            .Select(l => new { l.Id, l.TrustScore, l.TrustLevel })
-            .ToListAsync(cancellationToken);
-        var byId = scores.ToDictionary(x => x.Id);
-
-        var updated = page.Items.Select(item =>
-        {
-            if (!byId.TryGetValue(item.LawyerId, out var score))
-            {
-                return item;
-            }
-
-            return item with
-            {
-                TrustScore = score.TrustScore ?? 0,
-                TrustLevel = string.IsNullOrWhiteSpace(score.TrustLevel)
-                    ? TrustScoreCalculator.NewLawyerLevel
-                    : score.TrustLevel
-            };
-        }).ToList();
-
-        return new PagedResult<LawyerSearchItemResponse>(updated, page.TotalCount, page.PageNumber, page.PageSize);
     }
 
     private IQueryable<Lawyer> BuildFilteredQuery(SearchLawyersQuery request)
@@ -261,16 +217,18 @@ public sealed class SearchLawyersQueryHandler
     {
         var address = lawyer.User.Addresses
             .FirstOrDefault(a => a.IsPrimary && a.Latitude.HasValue && a.Longitude.HasValue);
-        return address is null
-            ? null
-            : GeoDistance.Kilometers(originLat, originLon, address.Latitude!.Value, address.Longitude!.Value);
+        if (address is null)
+        {
+            return null;
+        }
+
+        // Rounded to 0.5 km so repeated searches from different origins cannot triangulate a home address.
+        var exact = GeoDistance.Kilometers(originLat, originLon, address.Latitude!.Value, address.Longitude!.Value);
+        return Math.Max(0.5, Math.Round(exact * 2, MidpointRounding.AwayFromZero) / 2);
     }
 
     private static LawyerSearchItemResponse Map(Lawyer lawyer, double? distanceKm)
     {
-        var address = lawyer.User.Addresses
-            .FirstOrDefault(a => a.IsPrimary && a.Latitude.HasValue && a.Longitude.HasValue);
-
         return new LawyerSearchItemResponse(
             lawyer.Id,
             lawyer.UserId,
@@ -293,8 +251,6 @@ public sealed class SearchLawyersQueryHandler
                 .Select(s => s.Specialization.Name)
                 .ToArray(),
             lawyer.Languages.Select(l => l.LanguageName).ToArray(),
-            address?.Latitude,
-            address?.Longitude,
             distanceKm,
             lawyer.TrustScore ?? 0,
             string.IsNullOrWhiteSpace(lawyer.TrustLevel)

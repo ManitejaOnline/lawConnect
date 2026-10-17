@@ -20,7 +20,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { getErrorMessage } from '@/utils/errors';
 
 const schema = z.object({
-  identifier: z.string().min(3, 'Enter email or phone'),
+  identifier: z.string().trim().email('Enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
@@ -70,7 +70,7 @@ export function LoginScreen({ navigation }: Props) {
         />
       }
     >
-      <ScreenHeader title="Sign in" subtitle="Email or phone + password" onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Sign in" subtitle="Email and password" onBack={() => navigation.goBack()} />
       <View style={{ alignItems: 'center', marginBottom: theme.spacing.sm }}>
         <BrandMark size={56} />
       </View>
@@ -80,7 +80,7 @@ export function LoginScreen({ navigation }: Props) {
           name="identifier"
           render={({ field: { onChange, onBlur, value } }) => (
             <TextField
-              label="Email or phone"
+              label="Email"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}

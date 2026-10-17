@@ -404,6 +404,11 @@ public sealed class PaymentService : IPaymentService
             .FirstOrDefaultAsync(r => r.IdempotencyKey == idempotencyKey, cancellationToken);
         if (existingRefund is not null)
         {
+            if (existingRefund.PaymentId != paymentId)
+            {
+                throw new ConflictException("Idempotency key was already used for a different payment.");
+            }
+
             return new RefundResponse(existingRefund.Id, existingRefund.PaymentId, existingRefund.Amount, existingRefund.Status.ToString(), existingRefund.ProviderRefundId);
         }
 

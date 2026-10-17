@@ -5,6 +5,7 @@ using LawConnect.Application.Common.Models;
 using LawConnect.Application.Features.Payments.Commands;
 using LawConnect.Application.Features.Payments.Models;
 using LawConnect.Application.Features.Payments.Queries;
+using LawConnect.Shared.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,11 +21,16 @@ namespace LawConnect.Api.Controllers;
 public sealed class PaymentsController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly IHostEnvironment _environment;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PaymentsController"/> class.
     /// </summary>
-    public PaymentsController(ISender sender) => _sender = sender;
+    public PaymentsController(ISender sender, IHostEnvironment environment)
+    {
+        _sender = sender;
+        _environment = environment;
+    }
 
     /// <summary>
     /// Initiates appointment payment checkout.
@@ -66,6 +72,7 @@ public sealed class PaymentsController : ControllerBase
     /// Refunds a captured payment.
     /// </summary>
     [HttpPost("{paymentId:guid}/refund")]
+    [Authorize(Policy = PolicyNames.AdminOnly)]
     [ProducesResponseType(typeof(RefundResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Refund(
         Guid paymentId,
@@ -105,10 +112,19 @@ public sealed class PaymentsController : ControllerBase
     /// </summary>
     [HttpPost("wallet/top-up")]
     [ProducesResponseType(typeof(WalletResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> TopUp(
         [FromBody] TopUpWalletApiRequest request,
         CancellationToken cancellationToken)
     {
+        // Top-up credits the wallet without collecting money, so it only exists in non-production environments.
+        if (!_environment.IsDevelopment()
+            && !_environment.IsEnvironment("Testing")
+            && !_environment.IsEnvironment("Docker"))
+        {
+            return NotFound();
+        }
+
         var result = await _sender.Send(new TopUpWalletCommand(request.Amount, request.IdempotencyKey), cancellationToken);
         return result.ToActionResult();
     }

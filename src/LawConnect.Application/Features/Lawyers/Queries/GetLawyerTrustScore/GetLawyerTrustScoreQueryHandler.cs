@@ -32,34 +32,32 @@ public sealed class GetLawyerTrustScoreQueryHandler
         GetLawyerTrustScoreQuery request,
         CancellationToken cancellationToken)
     {
-        // Intentionally tracked (not AsNoTracking): if a recalculation runs below, EF's identity
-        // map updates this same in-memory instance so we don't need a second round trip to re-read it.
+        // This endpoint is anonymous: compute live but never write, so public traffic cannot
+        // contend with the lawyer's own updates on the Lawyer row.
         var lawyer = await _dbContext.Lawyers
-            .FirstOrDefaultAsync(l => l.Id == request.LawyerId, cancellationToken)
+            .AsNoTracking()
+            .Where(l => l.Id == request.LawyerId)
+            .Select(l => new { l.Id, l.RatingAverage, l.RatingCount })
+            .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException(nameof(Lawyer), request.LawyerId);
 
-        await _trustScoreService.RecalculateAsync(lawyer.Id, cancellationToken);
-
-        var latest = await _dbContext.LawyerTrustScoreHistories
-            .AsNoTracking()
-            .Where(h => h.LawyerId == lawyer.Id)
-            .OrderByDescending(h => h.ComputedAtUtc)
-            .FirstAsync(cancellationToken);
+        var snapshot = await _trustScoreService.ComputeAsync(lawyer.Id, cancellationToken)
+            ?? throw new NotFoundException(nameof(Lawyer), request.LawyerId);
 
         var breakdown = new TrustScoreBreakdown(
-            Math.Round(latest.ClientRatingPoints, 1),
-            Math.Round(latest.AppointmentReliabilityPoints, 1),
-            Math.Round(latest.ResponsivenessPoints, 1),
-            Math.Round(latest.CaseUpdatePoints, 1),
-            Math.Round(latest.CaseManagementPoints, 1),
-            Math.Round(latest.VerifiedComplaintPoints, 1));
+            Math.Round(snapshot.ClientRatingPoints, 1),
+            Math.Round(snapshot.AppointmentReliabilityPoints, 1),
+            Math.Round(snapshot.ResponsivenessPoints, 1),
+            Math.Round(snapshot.CaseUpdatePoints, 1),
+            Math.Round(snapshot.CaseManagementPoints, 1),
+            Math.Round(snapshot.VerifiedComplaintPoints, 1));
 
         return Result.Success(new LawyerTrustScoreResponse(
-            lawyer.TrustScore!.Value,
-            lawyer.TrustLevel!,
+            snapshot.Score,
+            snapshot.Level,
             lawyer.RatingAverage,
             lawyer.RatingCount,
             breakdown,
-            latest.CaseManagementNote));
+            snapshot.CaseManagementNote));
     }
 }

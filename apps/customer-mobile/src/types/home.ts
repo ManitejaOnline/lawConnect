@@ -31,8 +31,6 @@ export type LawyerSearchItem = {
   trustLevel?: string | null;
   practiceAreas: string[];
   languages: string[];
-  latitude?: number | null;
-  longitude?: number | null;
   distanceKm?: number | null;
 };
 

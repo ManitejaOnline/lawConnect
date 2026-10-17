@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using LawConnect.Application.Common.Interfaces;
+using LawConnect.Domain.Exceptions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace LawConnect.Infrastructure.Payments;
@@ -14,11 +16,17 @@ public sealed class FakePaymentProvider : IPaymentProvider, IPaymentGateway
 {
     private readonly ConcurrentDictionary<string, FakePayment> _payments = new();
     private readonly ILogger<FakePaymentProvider> _logger;
+    private readonly bool _acceptWebhooks;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FakePaymentProvider"/> class.
     /// </summary>
-    public FakePaymentProvider(ILogger<FakePaymentProvider> logger) => _logger = logger;
+    public FakePaymentProvider(ILogger<FakePaymentProvider> logger, IHostEnvironment environment)
+    {
+        _logger = logger;
+        // Fake webhook secrets are public in source; an anonymous caller could mark any order paid in production.
+        _acceptWebhooks = !environment.IsProduction();
+    }
 
     /// <inheritdoc />
     public string Name => "Fake";
@@ -31,6 +39,7 @@ public sealed class FakePaymentProvider : IPaymentProvider, IPaymentGateway
         IReadOnlyDictionary<string, string>? notes = null,
         CancellationToken cancellationToken = default)
     {
+        EnsureEnabled();
         var orderId = $"order_fake_{Guid.NewGuid():N}";
         _payments[orderId] = new FakePayment(orderId, null, amount, currency, "created");
         return Task.FromResult(new PaymentOrderResult(orderId, amount, currency, "created"));
@@ -51,6 +60,7 @@ public sealed class FakePaymentProvider : IPaymentProvider, IPaymentGateway
         string signature,
         CancellationToken cancellationToken = default)
     {
+        EnsureEnabled();
         var expected = ComputeSignature(orderId, paymentId);
         var valid = string.Equals(expected, signature, StringComparison.Ordinal)
                     || string.Equals(signature, "fake-valid-signature", StringComparison.Ordinal);
@@ -70,6 +80,7 @@ public sealed class FakePaymentProvider : IPaymentProvider, IPaymentGateway
         IReadOnlyDictionary<string, string>? notes = null,
         CancellationToken cancellationToken = default)
     {
+        EnsureEnabled();
         var orderId = $"order_hold_{Guid.NewGuid():N}";
         var paymentId = $"pay_hold_{Guid.NewGuid():N}";
         _payments[paymentId] = new FakePayment(orderId, paymentId, amount, currency, "authorized");
@@ -83,6 +94,7 @@ public sealed class FakePaymentProvider : IPaymentProvider, IPaymentGateway
         decimal amount,
         CancellationToken cancellationToken = default)
     {
+        EnsureEnabled();
         if (!_payments.TryGetValue(providerPaymentId, out var payment)
             && !_payments.Values.Any(p => p.PaymentId == providerPaymentId))
         {
@@ -116,18 +128,28 @@ public sealed class FakePaymentProvider : IPaymentProvider, IPaymentGateway
         string? notes = null,
         CancellationToken cancellationToken = default)
     {
+        EnsureEnabled();
         var refundId = $"rfnd_fake_{Guid.NewGuid():N}";
         return Task.FromResult(new ProviderRefundResult(refundId, "processed", amount));
     }
 
     /// <inheritdoc />
     public bool VerifyWebhookSignature(string rawBody, string signatureHeader) =>
-        string.Equals(signatureHeader, "fake-webhook-signature", StringComparison.Ordinal)
-        || string.Equals(signatureHeader, ComputeHmac(rawBody, "fake-webhook-secret"), StringComparison.Ordinal);
+        _acceptWebhooks
+        && (string.Equals(signatureHeader, "fake-webhook-signature", StringComparison.Ordinal)
+            || string.Equals(signatureHeader, ComputeHmac(rawBody, "fake-webhook-secret"), StringComparison.Ordinal));
 
     /// <summary>Computes a deterministic client signature for tests.</summary>
     public static string ComputeSignature(string orderId, string paymentId) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{orderId}|{paymentId}"))).ToLowerInvariant();
+
+    private void EnsureEnabled()
+    {
+        if (!_acceptWebhooks)
+        {
+            throw new BusinessRuleException("Payments are disabled.", "Payments.Disabled");
+        }
+    }
 
     private static string ComputeHmac(string body, string secret)
     {

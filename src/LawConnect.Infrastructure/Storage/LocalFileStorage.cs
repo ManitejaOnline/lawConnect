@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using LawConnect.Application.Common.Interfaces;
+using LawConnect.Domain.Exceptions;
 
 namespace LawConnect.Infrastructure.Storage;
 
@@ -13,6 +14,7 @@ public sealed class LocalFileStorage : IFileStorage
 {
     private readonly StorageOptions _options;
     private readonly IHostEnvironment _environment;
+    private readonly LocalStorageUrlSigner _signer;
     private readonly ILogger<LocalFileStorage> _logger;
     private readonly string _rootPath;
 
@@ -22,14 +24,17 @@ public sealed class LocalFileStorage : IFileStorage
     public LocalFileStorage(
         IOptions<StorageOptions> options,
         IHostEnvironment environment,
+        LocalStorageUrlSigner signer,
         ILogger<LocalFileStorage> logger)
     {
         _options = options.Value;
         _environment = environment;
+        _signer = signer;
         _logger = logger;
-        _rootPath = Path.IsPathRooted(_options.RootPath)
+        var root = Path.IsPathRooted(_options.RootPath)
             ? _options.RootPath
             : Path.Combine(_environment.ContentRootPath, _options.RootPath);
+        _rootPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
 
         Directory.CreateDirectory(_rootPath);
     }
@@ -77,10 +82,14 @@ public sealed class LocalFileStorage : IFileStorage
         TimeSpan validFor,
         CancellationToken cancellationToken = default)
     {
-        _ = validFor;
         if (StoragePath.IsPrivateKey(storageKey))
         {
             throw new InvalidOperationException("Private documents cannot be exposed as public URLs.");
+        }
+
+        if (StoragePath.RequiresSignedAccess(storageKey))
+        {
+            return Task.FromResult(_signer.CreateDownloadUrl(storageKey, DateTimeOffset.UtcNow.Add(validFor)));
         }
 
         var baseUrl = _options.PublicBaseUrl.TrimEnd('/');
@@ -96,13 +105,16 @@ public sealed class LocalFileStorage : IFileStorage
         TimeSpan validFor,
         CancellationToken cancellationToken = default)
     {
-        _ = contentType;
         var safeFolder = StoragePath.SanitizeFolder(folder);
         var extension = Path.GetExtension(fileName);
         var storageKey = $"{safeFolder}/{Guid.NewGuid():N}{extension}".Replace('\\', '/');
         var expires = DateTime.UtcNow.Add(validFor);
         // Local mode: client uploads through the API upload endpoint (credentials never exposed).
-        var uploadUrl = new Uri($"/api/storage/uploads/{Uri.EscapeDataString(storageKey)}", UriKind.Relative);
+        var uploadUrl = _signer.CreateUploadUrl(
+            storageKey,
+            contentType,
+            _options.MaxUploadBytes,
+            new DateTimeOffset(expires, TimeSpan.Zero));
         return Task.FromResult(new PresignedUploadResult(storageKey, uploadUrl, expires));
     }
 
@@ -116,8 +128,23 @@ public sealed class LocalFileStorage : IFileStorage
         ArgumentNullException.ThrowIfNull(content);
         var fullPath = GetFullPath(storageKey);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        await using var fileStream = File.Create(fullPath);
-        await content.CopyToAsync(fileStream, cancellationToken);
+
+        // Signed upload keys are single-use: never overwrite an existing object.
+        FileStream fileStream;
+        try
+        {
+            fileStream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        }
+        catch (IOException) when (File.Exists(fullPath))
+        {
+            throw new ConflictException("A file already exists for this upload key.");
+        }
+
+        await using (fileStream)
+        {
+            await content.CopyToAsync(fileStream, cancellationToken);
+        }
+
         _logger.LogInformation("Wrote exact key {StorageKey} ({ContentType})", storageKey, contentType);
     }
 

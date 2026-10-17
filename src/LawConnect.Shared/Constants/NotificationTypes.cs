@@ -28,4 +28,7 @@ public static class NotificationTypes
 
     /// <summary>Another lawyer accepted first.</summary>
     public const string EmergencyTaken = "emergency.taken";
+
+    /// <summary>A lawyer asked to receive a document stored on the customer's phone.</summary>
+    public const string DocumentTransferRequested = "document.transfer_requested";
 }

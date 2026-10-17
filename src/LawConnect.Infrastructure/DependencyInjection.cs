@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -92,10 +94,12 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUser, CurrentUserService>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.AddScoped<ILawyerScheduleGuard, PostgresLawyerScheduleGuard>();
         services.AddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IOtpGenerator, OtpGenerator>();
         services.AddSingleton<ITokenHasher, TokenHasher>();
+        services.AddSingleton<LocalStorageUrlSigner>();
         services.AddSingleton<IPasswordHasher, AspNetPasswordHasher>();
         services.AddScoped<ISmsService, LoggingSmsService>();
         services.AddSingleton<IVirusScanner, PassThroughVirusScanner>();
@@ -254,12 +258,34 @@ public static class DependencyInjection
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    OnTokenValidated = async context =>
+                    {
+                        var subject = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                            ?? context.Principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                        if (!Guid.TryParse(subject, out var userId))
+                        {
+                            context.Fail("Invalid subject.");
+                            return;
+                        }
+
+                        var db = context.HttpContext.RequestServices.GetRequiredService<IApplicationDbContext>();
+                        var active = await db.Users
+                            .IgnoreQueryFilters()
+                            .AsNoTracking()
+                            .AnyAsync(u => u.Id == userId && u.IsActive && !u.IsDeleted);
+                        if (!active)
+                        {
+                            context.Fail("Account is disabled.");
+                        }
+                    },
                     OnMessageReceived = context =>
                     {
                         var accessToken = context.Request.Query["access_token"];
                         var path = context.HttpContext.Request.Path;
                         if (!string.IsNullOrEmpty(accessToken)
-                            && (path.StartsWithSegments("/hubs/chat") || path.StartsWithSegments("/hubs/emergency")))
+                            && (path.StartsWithSegments("/hubs/chat")
+                                || path.StartsWithSegments("/hubs/emergency")
+                                || path.StartsWithSegments("/hubs/documents")))
                         {
                             context.Token = accessToken;
                         }

@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, View } from 'react-native';
 
 import { Icon } from '@/components/icons/Icon';
+import { getApiBaseUrl } from '@/config/apiBaseUrl';
 import { Text } from '@/components/ui/Text';
 import { ReadReceiptTicks } from '@/features/chat/components/ReadReceiptTicks';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -22,6 +23,11 @@ export function MessageBubble({ message, isMine, reaction, onLongPress }: Messag
   const theme = useTheme();
   const type = normalizeMessageType(message.type);
   const attachment = message.attachments[0];
+  const attachmentUri = attachment?.downloadUrl
+    ? attachment.downloadUrl.startsWith('http')
+      ? attachment.downloadUrl
+      : `${getApiBaseUrl()}${attachment.downloadUrl.startsWith('/') ? '' : '/'}${attachment.downloadUrl}`
+    : null;
 
   const bubbleBg = isMine ? theme.colors.accent : theme.colors.surface;
   const textColor = isMine ? theme.colors.textInverse : theme.colors.textPrimary;
@@ -59,9 +65,9 @@ export function MessageBubble({ message, isMine, reaction, onLongPress }: Messag
       >
         {type === 'Image' ? (
           <View style={{ gap: theme.spacing.xs }}>
-            {attachment?.downloadUrl ? (
+            {attachmentUri ? (
               <Image
-                source={{ uri: attachment.downloadUrl }}
+                source={{ uri: attachmentUri }}
                 style={{
                   width: 220,
                   height: 160,

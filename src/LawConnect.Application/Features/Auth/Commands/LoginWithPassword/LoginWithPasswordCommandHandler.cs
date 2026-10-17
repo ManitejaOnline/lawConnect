@@ -16,6 +16,7 @@ public sealed class LoginWithPasswordCommandHandler : IRequestHandler<LoginWithP
     private readonly IApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IAuthTokenIssuer _tokenIssuer;
+    private readonly string _timingPad;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LoginWithPasswordCommandHandler"/> class.
@@ -28,6 +29,7 @@ public sealed class LoginWithPasswordCommandHandler : IRequestHandler<LoginWithP
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _tokenIssuer = tokenIssuer;
+        _timingPad = passwordHasher.Hash("lawconnect-timing-pad");
     }
 
     /// <inheritdoc />
@@ -46,10 +48,15 @@ public sealed class LoginWithPasswordCommandHandler : IRequestHandler<LoginWithP
                 .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.PhoneNumber == identifier, cancellationToken);
 
-        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash)
-            || !_passwordHasher.Verify(user.PasswordHash, request.Password))
+        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
         {
-            throw new UnauthorizedException("Invalid email/phone or password.");
+            _passwordHasher.Verify(_timingPad, request.Password);
+            throw new UnauthorizedException("Invalid email or password.");
+        }
+
+        if (!_passwordHasher.Verify(user.PasswordHash, request.Password))
+        {
+            throw new UnauthorizedException("Invalid email or password.");
         }
 
         if (!user.IsActive)
